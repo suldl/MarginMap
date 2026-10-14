@@ -94,19 +94,7 @@ notebooks\<id>.json   cards, mind map, whiteboard and review state
 assets\<id>.png       area-excerpt images and thumbnails
 ```
 
-**Settings → Data** shows the folder (*Open* opens it in Explorer) and lets you choose another one with *Change…* —
-another drive, a USB stick, or a folder that OneDrive/Dropbox backs up. When the new folder is empty you can
-**move** your library there (copied, checked, then removed from the old folder) or start a **new, empty library**;
-if it already holds a MarginMap library, MarginMap **opens** that one instead, so you can keep several libraries
-and switch between them. A non-empty folder or a drive root gets a `MarginMap` subfolder. *Use default* goes back
-to `%APPDATA%\MarginMap`.
-
-The choice is saved in `%APPDATA%\MarginMap\data-location.json`; settings and logs always stay in `%APPDATA%\MarginMap`.
-If the chosen folder can't be found at startup (drive unplugged, network share offline), MarginMap says so and
-waits — *Try again*, choose another folder, or use the default one — instead of starting an empty library.
-Don't open the same synced library on two computers at once.
-
-`MARGINMAP_DATA_DIR` replaces `%APPDATA%\MarginMap` itself (settings included) — handy for portable use and testing.
+Set `MARGINMAP_DATA_DIR` to use a different folder (portable use, testing). Settings → About → *Open* shows the folder in Explorer.
 
 ## Releasing on GitHub
 
@@ -125,15 +113,15 @@ Releases are built and uploaded by GitHub Actions ([`.github/workflows/release.y
 
 **Each release**
 
-1. Set the new `version` in `package.json` (e.g. `0.5.2`), add the changes to `UpdateLog.md`, commit.
+1. Set the new `version` in `package.json` (e.g. `0.5.1`), add the changes to `UpdateLog.md`, commit.
 2. Tag and push — the tag must be `v` + the version:
    ```bash
-   git tag v0.5.2
+   git tag v0.5.1
    git push origin main --tags
    ```
 3. The workflow type-checks, runs the end-to-end tests on Windows, builds, and uploads to a **draft** release:
-   `MarginMap-Setup-0.5.2.exe` (installer), its `.blockmap`, `latest.yml` (read by the updater) and
-   `MarginMap-0.5.2-portable.exe`.
+   `MarginMap-Setup-0.5.1.exe` (installer), its `.blockmap`, `latest.yml` (read by the updater) and
+   `MarginMap-0.5.1-portable.exe`.
 4. On GitHub → Releases, open the draft, write the notes (they are shown in the app), and **Publish**.
    Installed copies see the update from that moment on.
 
@@ -152,7 +140,7 @@ which can be switched off).
 - **Installed copy** (`MarginMap-Setup-….exe`): *Download update* fetches the new installer in the background
   (only the changed parts when possible, thanks to the `.blockmap`), then *Restart and install* closes MarginMap,
   installs silently and starts the new version. Quitting the app after downloading installs it as well.
-  Your library is never touched — it lives in its data folder.
+  Your library is never touched — it lives in `%APPDATA%\MarginMap`.
 - **Portable copy**: it can't replace itself, so it only reports the new version and opens the release page.
 
 Implementation: [`electron/autoUpdate.ts`](electron/autoUpdate.ts) (electron-updater, installed copies) and
