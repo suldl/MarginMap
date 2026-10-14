@@ -4,13 +4,16 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import pkg from '../package.json';
 import { canAutoUpdate, checkAuto, downloadAuto, installAuto } from './autoUpdate';
+import { changeDataDir, dataDir, dataDirLocation, dataStatus, initDataDir, isDataDirBusy, pickDataDir, trackWrite } from './dataDir';
 import { checkForUpdates, describeFeed, resolveFeed } from './updates';
+import type { DataChangeMode } from '../src/backend';
 
 const DEV_URL = process.env.VITE_DEV_SERVER_URL;
 const RENDERER_DIR = path.join(__dirname, '..', 'dist');
 
 // Optional override (portable installs, automated tests).
 if (process.env.MARGINMAP_DATA_DIR) app.setPath('userData', path.resolve(process.env.MARGINMAP_DATA_DIR));
+initDataDir();
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -20,14 +23,13 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 // ---------------------------------------------------------------------------
-// Storage layout (inside %APPDATA%/MarginMap):
+// Storage layout (inside %APPDATA%/MarginMap, or the folder chosen in Settings → Data):
 //   library.json            document + notebook index
 //   docs/<id>.pdf           imported documents
 //   notebooks/<id>.json     cards, mind map and review state
 //   assets/<id>.<ext>       area-excerpt images and thumbnails
 // ---------------------------------------------------------------------------
 
-const dataDir = () => app.getPath('userData');
 const docPath = (id: string) => path.join(dataDir(), 'docs', `${safeId(id)}.pdf`);
 const notebookPath = (id: string) => path.join(dataDir(), 'notebooks', `${safeId(id)}.json`);
 const assetDir = () => path.join(dataDir(), 'assets');
@@ -42,7 +44,11 @@ function safeId(id: string): string {
 
 let tmpSeq = 0;
 
-async function writeAtomic(file: string, data: string | Uint8Array) {
+/** Writes go through trackWrite so moving the library (Settings → Data) can wait for them. */
+const writeAtomic = (file: string, data: string | Uint8Array) => trackWrite(writeFileAtomic(file, data));
+const remove = (file: string) => trackWrite(fs.rm(file, { force: true }));
+
+async function writeFileAtomic(file: string, data: string | Uint8Array) {
   await fs.mkdir(path.dirname(file), { recursive: true });
   const tmp = `${file}.${process.pid}.${++tmpSeq}.tmp`;
   await fs.writeFile(tmp, data);
@@ -78,11 +84,11 @@ function registerIpc() {
 
   ipcMain.handle('doc:save', (_e, id: string, bytes: Uint8Array) => writeAtomic(docPath(id), bytes));
   ipcMain.handle('doc:read', async (_e, id: string) => new Uint8Array(await fs.readFile(docPath(id))));
-  ipcMain.handle('doc:delete', (_e, id: string) => fs.rm(docPath(id), { force: true }));
+  ipcMain.handle('doc:delete', (_e, id: string) => remove(docPath(id)));
 
   ipcMain.handle('nb:load', (_e, id: string) => readJson(notebookPath(id)));
   ipcMain.handle('nb:save', (_e, nb: { id: string }) => writeAtomic(notebookPath(nb.id), JSON.stringify(nb)));
-  ipcMain.handle('nb:delete', (_e, id: string) => fs.rm(notebookPath(id), { force: true }));
+  ipcMain.handle('nb:delete', (_e, id: string) => remove(notebookPath(id)));
 
   ipcMain.handle('asset:put', (_e, id: string, bytes: Uint8Array, mime: string) =>
     writeAtomic(path.join(assetDir(), `${safeId(id)}.${MIME_EXT[mime] ?? 'bin'}`), bytes),
@@ -97,7 +103,7 @@ function registerIpc() {
   });
   ipcMain.handle('asset:delete', async (_e, id: string) => {
     safeId(id);
-    await Promise.all(Object.values(MIME_EXT).map((ext) => fs.rm(path.join(assetDir(), `${id}.${ext}`), { force: true })));
+    await Promise.all(Object.values(MIME_EXT).map((ext) => remove(path.join(assetDir(), `${id}.${ext}`))));
   });
 
   ipcMain.handle(
@@ -126,7 +132,7 @@ function registerIpc() {
 
   ipcMain.handle('app:info', () => ({
     version: app.getVersion(),
-    dataDir: dataDir(),
+    dataDir: dataDirLocation(),
     electron: process.versions.electron,
     chrome: process.versions.chrome,
     updateSource: process.env.MARGINMAP_UPDATE_GENERIC && canAutoUpdate(false) ? process.env.MARGINMAP_UPDATE_GENERIC : describeFeed(updateFeed()),
@@ -142,6 +148,13 @@ function registerIpc() {
     await fs.mkdir(dataDir(), { recursive: true });
     await shell.openPath(dataDir());
   });
+
+  // Settings → Data: choose where the library lives.
+  ipcMain.handle('data:status', () => dataStatus());
+  ipcMain.handle('data:pick', (e, useDefault: boolean) => pickDataDir(BrowserWindow.fromWebContents(e.sender), !!useDefault));
+  ipcMain.handle('data:change', (e, dir: string, mode: DataChangeMode) =>
+    changeDataDir(String(dir), mode, (p) => !e.sender.isDestroyed() && e.sender.send('data:progress', p)),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -220,6 +233,10 @@ function createWindow() {
   mainWindow = win;
 
   win.once('ready-to-show', () => win.show());
+  // Closing half-way through moving the library would leave it split between two folders.
+  win.on('close', (e) => {
+    if (isDataDirBusy()) e.preventDefault();
+  });
   win.on('closed', () => {
     if (mainWindow === win) mainWindow = null;
   });

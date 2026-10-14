@@ -41,5 +41,11 @@ export function createWebBackend(): Backend {
     installUpdate: async () => {},
     onUpdateEvent: () => () => {},
     openDataDir: async () => {},
+    dataFolder: async () => null,
+    pickDataFolder: async () => null,
+    changeDataFolder: async () => {
+      throw new Error('The browser version keeps its data in the browser');
+    },
+    onDataProgress: () => () => {},
   };
 }

@@ -1,22 +1,27 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { backend, isElectron, type AppInfo } from '../backend';
+import { backend, isElectron, type AppInfo, type DataFolderInfo } from '../backend';
 import { formatDate } from '../lib/util';
+import { useDataFolder } from '../store/dataFolder';
 import { ACCENTS, UI_SCALES, useSettings, type CanvasBg, type EdgeStyle, type MapDrag, type ThemePref } from '../store/settings';
 import { useStudy } from '../store/study';
 import { useUi, type SettingsSection } from '../store/ui';
 import { useUpdates } from '../store/updates';
+import { describeLibrary } from './DataFolder';
 import { Icon, type IconName } from './Icon';
 import { useLatexAssist } from './LatexAssist';
 import { MathText } from './MathText';
 
-const SECTIONS: { id: SettingsSection; label: string; icon: IconName }[] = [
+const ALL_SECTIONS: { id: SettingsSection; label: string; icon: IconName }[] = [
   { id: 'appearance', label: 'Appearance', icon: 'palette' },
   { id: 'maps', label: 'Mind map & board', icon: 'mindmap' },
   { id: 'math', label: 'Formulas', icon: 'sigma' },
+  { id: 'data', label: 'Data', icon: 'folder' },
   { id: 'updates', label: 'Updates', icon: 'refresh' },
   { id: 'shortcuts', label: 'Shortcuts', icon: 'keyboard' },
   { id: 'about', label: 'About', icon: 'info' },
 ];
+/** The browser build keeps its data in the browser, so it has no data folder to manage. */
+const SECTIONS = ALL_SECTIONS.filter((s) => isElectron || s.id !== 'data');
 
 export function Settings({ section }: { section: SettingsSection }) {
   const close = useUi((s) => s.closeSettings);
@@ -24,7 +29,7 @@ export function Settings({ section }: { section: SettingsSection }) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !useUi.getState().dialog && !useUi.getState().menu) {
+      if (e.key === 'Escape' && !useUi.getState().dialog && !useUi.getState().menu && !useDataFolder.getState().pick) {
         e.stopPropagation();
         close();
       }
@@ -55,6 +60,7 @@ export function Settings({ section }: { section: SettingsSection }) {
             {section === 'appearance' && <AppearancePage />}
             {section === 'maps' && <MapsPage />}
             {section === 'math' && <MathPage />}
+            {section === 'data' && <DataPage />}
             {section === 'updates' && <UpdatesPage />}
             {section === 'shortcuts' && <ShortcutsPage />}
             {section === 'about' && <AboutPage />}
@@ -244,6 +250,45 @@ function MathPage() {
           </tr>
         </tbody>
       </table>
+    </>
+  );
+}
+
+function DataPage() {
+  const [info, setInfo] = useState<DataFolderInfo | null>(null);
+  const choose = useDataFolder((s) => s.choose);
+  useEffect(() => {
+    void backend.dataFolder().then(setInfo);
+  }, []);
+  if (!info) return null;
+  return (
+    <>
+      <Row title="Data folder" hint={<span className="data-path">{info.dir}</span>}>
+        {info.available && (
+          <button className="btn outline" onClick={() => void backend.openDataDir()}>
+            <Icon name="folder" size={16} /> Open
+          </button>
+        )}
+        <button className="btn outline" onClick={() => void choose()}>
+          Change…
+        </button>
+      </Row>
+      <Row title="In this folder">{info.available ? describeLibrary(info) : 'The folder can’t be found'}</Row>
+      {info.custom && (
+        <Row title="Default folder" hint={<span className="data-path">{info.defaultDir}</span>}>
+          <button className="btn outline" onClick={() => void choose(true)}>
+            Use default
+          </button>
+        </Row>
+      )}
+      <div className="set-note">
+        <Icon name="info" size={15} />
+        <div>
+          Your documents, notebooks and images live in the data folder. Move it to another drive to free up space, or into a folder your backup or
+          sync service (OneDrive, Dropbox…) already covers. Don’t open the same synced library on two computers at once — their changes can
+          overwrite each other. Settings and logs always stay in <span className="data-path">{info.defaultDir}</span>.
+        </div>
+      </div>
     </>
   );
 }
@@ -451,6 +496,7 @@ function ShortcutsPage() {
 }
 
 function AboutPage() {
+  const open = useUi((s) => s.openSettings);
   const [info, setInfo] = useState<AppInfo | null>(null);
   useEffect(() => {
     void backend.appInfo().then(setInfo);
@@ -469,8 +515,8 @@ function AboutPage() {
       )}
       {info?.dataDir && (
         <Row title="Data folder" hint={<span className="data-path">{info.dataDir}</span>}>
-          <button className="btn outline" onClick={() => void backend.openDataDir()}>
-            <Icon name="folder" size={16} /> Open
+          <button className="btn outline" onClick={() => open('data')}>
+            Change…
           </button>
         </Row>
       )}

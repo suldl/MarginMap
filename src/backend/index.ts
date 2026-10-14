@@ -48,6 +48,52 @@ export type UpdateEvent =
   | { type: 'downloaded'; version: string }
   | { type: 'error'; message: string };
 
+/** Where the library lives (Electron only). */
+export interface DataFolderInfo {
+  dir: string;
+  /** The app's own folder (%APPDATA%\MarginMap), used unless another folder was chosen. */
+  defaultDir: string;
+  custom: boolean;
+  /** False when the chosen folder can't be found (unplugged drive, offline network share, renamed folder). */
+  available: boolean;
+  hasLibrary: boolean;
+  docs: number;
+  notebooks: number;
+  /** Size of the library's files. */
+  bytes: number;
+}
+
+/** A folder picked for the library, and what is already in it. */
+export interface DataFolderPick {
+  dir: string;
+  isDefault: boolean;
+  hasLibrary: boolean;
+  docs: number;
+  notebooks: number;
+  bytes: number;
+  /** Why the folder can't be used. */
+  error?: string;
+}
+
+/**
+ * 'move': copy the library to the new folder, then remove it from the old one.
+ * 'switch': open the library that is already in the new folder.
+ * 'new': start an empty library in the new folder.
+ */
+export type DataChangeMode = 'move' | 'switch' | 'new';
+
+export interface DataChangeResult {
+  /** Something went wrong after the change itself succeeded (e.g. old files left behind). */
+  warning?: string;
+}
+
+export interface DataProgress {
+  files: number;
+  totalFiles: number;
+  bytes: number;
+  totalBytes: number;
+}
+
 /** Persistence layer. Electron stores files under %APPDATA%; the browser build uses IndexedDB. */
 export interface Backend {
   kind: 'electron' | 'web';
@@ -78,6 +124,13 @@ export interface Backend {
   onUpdateEvent(cb: (e: UpdateEvent) => void): () => void;
   /** Opens the data folder in Explorer (Electron only). */
   openDataDir(): Promise<void>;
+  /** The library folder and what is in it; null in the browser build. */
+  dataFolder(): Promise<DataFolderInfo | null>;
+  /** Asks for a new library folder (or takes the default one). Null when cancelled. */
+  pickDataFolder(useDefault: boolean): Promise<DataFolderPick | null>;
+  /** Moves or switches the library to the picked folder; the window reloads afterwards. */
+  changeDataFolder(dir: string, mode: DataChangeMode): Promise<DataChangeResult>;
+  onDataProgress(cb: (p: DataProgress) => void): () => void;
 }
 
 declare global {

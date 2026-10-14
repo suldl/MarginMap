@@ -24,7 +24,7 @@ A MarginNote-style study app for Windows. It covers the core MarginNote workflow
 | **Card panel** | Title, color, editable excerpt, notes, tags, source link, review toggle |
 | **Review** | Spaced repetition (SM-2, Anki-like): Again / Hard / Good / Easy, per notebook or across all notebooks |
 | **Export** | Markdown, OPML (importable by mind-map apps such as XMind and MindNode), JSON backup |
-| **Settings** | Theme (system/light/dark), accent color, interface size, canvas background, connector style, drag behavior, formula options (**Ctrl+,**) |
+| **Settings** | Theme (system/light/dark), accent color, interface size, canvas background, connector style, drag behavior, formula options, data folder (**Ctrl+,**) |
 | **Updates** | In-app updates from GitHub releases: download in the background, restart to install — see [In-app updates](#in-app-updates) |
 | **Comfort** | Undo/redo for all card, group and whiteboard edits, middle-click to close document tabs, native window controls, auto-save |
 
@@ -43,7 +43,7 @@ Build the Windows installer and a portable `.exe` (written to `release/`):
 npm run dist
 ```
 
-`release/MarginMap-Setup-0.5.0.exe` is a normal installer (it can update itself). `release/MarginMap-0.5.0-portable.exe` runs without installing.
+`release/MarginMap-Setup-0.5.1.exe` is a normal installer (it can update itself). `release/MarginMap-0.5.1-portable.exe` runs without installing.
 To publish a release on GitHub, see [Releasing on GitHub](#releasing-on-github).
 The builds are unsigned, so Windows SmartScreen will ask for confirmation the first time.
 
@@ -85,7 +85,7 @@ Other scripts:
 
 ## Where your data lives
 
-Everything is stored locally in `%APPDATA%\MarginMap`:
+By default everything is stored locally in `%APPDATA%\MarginMap`:
 
 ```
 library.json          documents + notebooks index
@@ -94,12 +94,25 @@ notebooks\<id>.json   cards, mind map, whiteboard and review state
 assets\<id>.png       area-excerpt images and thumbnails
 ```
 
-Set `MARGINMAP_DATA_DIR` to use a different folder (portable use, testing). Settings → About → *Open* shows the folder in Explorer.
+**Settings → Data** shows the folder (*Open* opens it in Explorer) and lets you choose another one with *Change…* —
+another drive, a USB stick, or a folder that OneDrive/Dropbox backs up. When the new folder is empty you can
+**move** your library there (copied, checked, then removed from the old folder) or start a **new, empty library**;
+if it already holds a MarginMap library, MarginMap **opens** that one instead, so you can keep several libraries
+and switch between them. A non-empty folder or a drive root gets a `MarginMap` subfolder. *Use default* goes back
+to `%APPDATA%\MarginMap`.
+
+The choice is saved in `%APPDATA%\MarginMap\data-location.json`; settings and logs always stay in `%APPDATA%\MarginMap`.
+If the chosen folder can't be found at startup (drive unplugged, network share offline), MarginMap says so and
+waits — *Try again*, choose another folder, or use the default one — instead of starting an empty library.
+Don't open the same synced library on two computers at once.
+
+`MARGINMAP_DATA_DIR` replaces `%APPDATA%\MarginMap` itself (settings included) — handy for portable use and testing.
 
 ## Architecture
 
 ```
 electron/main.ts      window, app:// protocol, file storage over IPC, single-instance + "Open with"
+electron/dataDir.ts   where the library lives: choosing, moving or switching the data folder
 electron/autoUpdate.ts in-app updates for the installed build (electron-updater)
 electron/updates.ts   notify-only update check (portable build, development)
 electron/preload.ts   the narrow API exposed to the UI (contextIsolation + sandbox on)
