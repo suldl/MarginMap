@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import pkg from '../package.json';
+import { canAutoUpdate, checkAuto, downloadAuto, installAuto } from './autoUpdate';
 import { checkForUpdates, describeFeed, resolveFeed } from './updates';
 
 const DEV_URL = process.env.VITE_DEV_SERVER_URL;
@@ -128,17 +129,41 @@ function registerIpc() {
     dataDir: dataDir(),
     electron: process.versions.electron,
     chrome: process.versions.chrome,
-    updateSource: describeFeed(updateFeed()),
+    updateSource: process.env.MARGINMAP_UPDATE_GENERIC && canAutoUpdate(false) ? process.env.MARGINMAP_UPDATE_GENERIC : describeFeed(updateFeed()),
+    updateMode: updateMode(),
   }));
-  ipcMain.handle('updates:check', () => checkForUpdates(app.getVersion(), updateFeed()));
+  // Installed builds update themselves; the portable copy and dev runs only point to the release page.
+  ipcMain.handle('updates:check', () =>
+    updateMode() === 'auto' ? checkAuto(app.getVersion(), releasePage()) : checkForUpdates(app.getVersion(), updateFeed()),
+  );
+  ipcMain.handle('updates:download', () => downloadAuto());
+  ipcMain.handle('updates:install', () => installAuto());
   ipcMain.handle('app:openDataDir', async () => {
     await fs.mkdir(dataDir(), { recursive: true });
     await shell.openPath(dataDir());
   });
 }
 
-/** Release feed for "Check for updates" (package.json → marginmap.updateUrl, or MARGINMAP_UPDATE_URL). */
-const updateFeed = () => resolveFeed((pkg as { marginmap?: { updateUrl?: string } }).marginmap?.updateUrl);
+// ---------------------------------------------------------------------------
+// Updates. The GitHub repository comes from package.json → build.publish (the same
+// setting electron-builder publishes to); "OWNER" is the placeholder until it is set.
+// ---------------------------------------------------------------------------
+
+const githubRepo = (() => {
+  const publish = (pkg as { build?: { publish?: { provider: string; owner?: string; repo?: string }[] } }).build?.publish ?? [];
+  const gh = publish.find((p) => p.provider === 'github');
+  return gh?.owner && gh.repo && gh.owner !== 'OWNER' ? `${gh.owner}/${gh.repo}` : undefined;
+})();
+
+/** Feed for the notify-only check (MARGINMAP_UPDATE_URL overrides it). */
+const updateFeed = () => resolveFeed(githubRepo);
+const releasePage = () => (githubRepo ? `https://github.com/${githubRepo}/releases` : undefined);
+
+function updateMode(): 'auto' | 'notify' | 'none' {
+  // An explicit notify feed (tests) wins over the installed app's own updater.
+  if (!process.env.MARGINMAP_UPDATE_URL && canAutoUpdate(!!githubRepo)) return 'auto';
+  return updateFeed() ? 'notify' : 'none';
+}
 
 // ---------------------------------------------------------------------------
 // "Open with…" / file association support

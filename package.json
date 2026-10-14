@@ -15,11 +15,10 @@
     "start": "electron .",
     "dist": "npm run build && electron-builder --win",
     "dist:dir": "npm run build && electron-builder --win --dir",
-    "test:e2e": "npm run build && node tests/smoke.mjs"
+    "test:e2e": "npm run build && node tests/smoke.mjs",
+    "release": "npm run build && electron-builder --win --publish always"
   },
-  "marginmap": {
-    "updateUrl": ""
-  },
+  "repository": "github:OWNER/marginmap",
   "build": {
     "appId": "app.marginmap.desktop",
     "electronDist": "node_modules/electron/dist",
@@ -48,8 +47,20 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
-    }
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.${ext}"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "OWNER",
+        "repo": "marginmap",
+        "releaseType": "draft"
+      }
+    ]
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
@@ -58,6 +69,7 @@
     "@vitejs/plugin-react": "^5.2.0",
     "electron": "^44.7.0",
     "electron-builder": "^26.15.3",
+    "electron-updater": "^6.8.9",
     "esbuild": "^0.25.12",
     "idb-keyval": "^6.3.0",
     "katex": "^0.16.47",

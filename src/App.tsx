@@ -7,7 +7,7 @@ import { Study } from './components/Study';
 import { useLibrary } from './store/library';
 import { applyAppearance, syncTitleBar } from './store/settings';
 import { useUi } from './store/ui';
-import { autoCheckForUpdates } from './store/updates';
+import { autoCheckForUpdates, initUpdates } from './store/updates';
 
 async function openIncoming(files: OpenFile[]) {
   if (!files.length) return;
@@ -36,6 +36,7 @@ export function App() {
         useUi.getState().toast(`Could not load your library: ${(err as Error).message}`, 'error');
       });
     const off = backend.onOpenFiles((files) => void openIncoming(files));
+    const offUpdates = initUpdates();
 
     // Dropping a file outside a drop zone must not navigate the window away.
     const block = (e: DragEvent) => e.preventDefault();
@@ -57,6 +58,7 @@ export function App() {
     mq.addEventListener('change', syncTitleBar);
     return () => {
       off();
+      offUpdates();
       window.removeEventListener('dragover', block);
       window.removeEventListener('drop', block);
       window.removeEventListener('keydown', onKey);

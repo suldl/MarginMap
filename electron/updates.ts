@@ -2,11 +2,12 @@ import { net } from 'electron';
 import type { UpdateResult } from '../src/backend';
 
 /**
- * "Check for updates" support. The feed is configured in package.json
- * (`marginmap.updateUrl`) or with the MARGINMAP_UPDATE_URL environment variable, as either
+ * Notify-only "Check for updates", used by the portable build and development runs (installed
+ * builds update themselves, see autoUpdate.ts). The feed is the GitHub repository from
+ * package.json → build.publish, or the MARGINMAP_UPDATE_URL environment variable, as either
  *   - `owner/repo` (or `github:owner/repo`): the latest GitHub release of that repository, or
  *   - an http(s) URL returning a GitHub release object or `{ "version", "url", "notes" }`.
- * Nothing is downloaded or installed automatically: the user is pointed to the release page.
+ * Nothing is downloaded or installed: the user is pointed to the release page.
  */
 export function resolveFeed(configured: string | undefined): string | null {
   const raw = (process.env.MARGINMAP_UPDATE_URL || configured || '').trim();

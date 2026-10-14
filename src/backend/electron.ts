@@ -29,6 +29,9 @@ export function createElectronBackend(api: ElectronApi): Backend {
     setZoom: (factor) => api.setZoom(factor),
     appInfo: () => api.appInfo(),
     checkForUpdates: () => api.checkForUpdates(),
+    downloadUpdate: () => api.downloadUpdate(),
+    installUpdate: () => api.installUpdate(),
+    onUpdateEvent: (cb) => api.onUpdateEvent(cb),
     openDataDir: () => api.openDataDir(),
   };
 }

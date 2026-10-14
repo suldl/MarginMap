@@ -2153,6 +2153,14 @@ select {
   background: var(--panel-2);
   margin: 8px 0 6px;
 }
+.update-progress {
+  margin-top: 8px;
+  height: 5px;
+}
+.update-error {
+  color: var(--danger);
+  margin: 2px 0 6px;
+}
 .release-notes {
   white-space: pre-wrap;
   max-height: 180px;

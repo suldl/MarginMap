@@ -15,7 +15,7 @@ Status: all items done in v0.5.0 (2026-10-14). `npm run test:e2e` covers each of
     2. [x] ...: mind map & board (left-drag selects or pans, enlarge cards on click), formulas (render LaTeX, autocomplete), updates, keyboard shortcuts, about (version, data folder)
 3. [x] "Check for updates" feature — Settings → Updates (manual button + optional once-a-day check at startup, shown as a toast)
     - Compares with the latest GitHub release (or a JSON feed) and opens the download page; nothing installs by itself.
-    - **To do on your side:** set `marginmap.updateUrl` in `package.json` to your repository (`owner/repo`) and rebuild. Until then the page says no update source is configured.
+    - Superseded in v0.5.1 by real in-app updates (see below); the repository is now set under `build.publish` in `package.json`.
 4. [x] Allow users to freely place the cards in the space.
     - Mind map: drag a card into empty space and it stays there, still connected to its parent (hold `Alt` to detach it as an independent card). Double-click empty space to create a card on that spot.
     - "Tidy up" (map toolbar / right-click) returns cards to the automatic layout. The whiteboard was already free-form.
@@ -45,3 +45,4 @@ Status: all items done in v0.5.0 (2026-10-14). `npm run test:e2e` covers each of
 ## Features to be updated
 
 1. Selected data folder
+

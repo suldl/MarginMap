@@ -21,6 +21,12 @@ export interface AppInfo {
   chrome?: string;
   /** Where update checks look, or null when this build has no update source configured. */
   updateSource: string | null;
+  /**
+   * 'auto': the installed app downloads and installs updates itself.
+   * 'notify': only reports new versions and links to the download page (portable copy, development runs).
+   * 'none': no update source configured.
+   */
+  updateMode: 'auto' | 'notify' | 'none';
 }
 
 export interface UpdateResult {
@@ -32,7 +38,15 @@ export interface UpdateResult {
   notes?: string;
   publishedAt?: string;
   error?: string;
+  /** The update can be downloaded and installed from inside the app. */
+  canInstall?: boolean;
 }
+
+/** Progress of an in-app update, pushed from the main process. */
+export type UpdateEvent =
+  | { type: 'progress'; percent: number; transferred: number; total: number; bytesPerSecond: number }
+  | { type: 'downloaded'; version: string }
+  | { type: 'error'; message: string };
 
 /** Persistence layer. Electron stores files under %APPDATA%; the browser build uses IndexedDB. */
 export interface Backend {
@@ -57,6 +71,11 @@ export interface Backend {
   setZoom(factor: number): void;
   appInfo(): Promise<AppInfo>;
   checkForUpdates(): Promise<UpdateResult>;
+  /** Downloads the update found by the last check (in-app updates only); progress arrives as UpdateEvents. */
+  downloadUpdate(): Promise<void>;
+  /** Quits, installs the downloaded update and restarts. */
+  installUpdate(): Promise<void>;
+  onUpdateEvent(cb: (e: UpdateEvent) => void): () => void;
   /** Opens the data folder in Explorer (Electron only). */
   openDataDir(): Promise<void>;
 }

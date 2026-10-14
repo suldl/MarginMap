@@ -1,0 +1,54 @@
+# Builds MarginMap on Windows and uploads it to a draft GitHub release.
+#
+#   1. Bump "version" in package.json and commit.
+#   2. git tag v0.5.1 && git push origin main --tags
+#   3. When this workflow is done, open the draft release on GitHub, edit the notes, Publish.
+#      Installed copies of MarginMap find the update once the release is published.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write # create the release and upload its files
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Tag must match package.json
+        shell: bash
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $version"
+            exit 1
+          fi
+
+      - name: Install
+        run: npm ci
+
+      - name: End-to-end tests
+        run: npm run test:e2e
+
+      - name: Upload test screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-output
+          path: tests/output/*.png
+
+      # test:e2e already ran the production build; package and upload it.
+      - name: Package and publish
+        run: npx electron-builder --win --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

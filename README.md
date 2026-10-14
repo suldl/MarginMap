@@ -25,7 +25,7 @@ A MarginNote-style study app for Windows. It covers the core MarginNote workflow
 | **Review** | Spaced repetition (SM-2, Anki-like): Again / Hard / Good / Easy, per notebook or across all notebooks |
 | **Export** | Markdown, OPML (importable by mind-map apps such as XMind and MindNode), JSON backup |
 | **Settings** | Theme (system/light/dark), accent color, interface size, canvas background, connector style, drag behavior, formula options (**Ctrl+,**) |
-| **Updates** | *Check for updates* (manually or once a day at startup) against your GitHub releases — see [Update checks](#update-checks) |
+| **Updates** | In-app updates from GitHub releases: download in the background, restart to install — see [In-app updates](#in-app-updates) |
 | **Comfort** | Undo/redo for all card, group and whiteboard edits, middle-click to close document tabs, native window controls, auto-save |
 
 ## Getting started
@@ -43,7 +43,8 @@ Build the Windows installer and a portable `.exe` (written to `release/`):
 npm run dist
 ```
 
-`release/MarginMap Setup 0.5.0.exe` is a normal installer. `release/MarginMap 0.5.0.exe` runs without installing.
+`release/MarginMap-Setup-0.5.0.exe` is a normal installer (it can update itself). `release/MarginMap-0.5.0-portable.exe` runs without installing.
+To publish a release on GitHub, see [Releasing on GitHub](#releasing-on-github).
 The builds are unsigned, so Windows SmartScreen will ask for confirmation the first time.
 
 Other scripts:
@@ -55,6 +56,7 @@ Other scripts:
 | `npm run test:e2e` | Builds, then drives the real Electron app through import → excerpt → map → review → whiteboard → settings, updates, formulas, selection, groups (screenshots in `tests/output/`) |
 | `node scripts/check-latex.mjs` | Checks that every LaTeX autocomplete suggestion renders in KaTeX |
 | `npm run dist:dir` | Unpacked build in `release/win-unpacked/` (faster than a full installer) |
+| `npm run release` | Build and upload to a draft GitHub release (needs `GH_TOKEN`; normally done by GitHub Actions) |
 
 ## How to use it
 
@@ -95,25 +97,67 @@ assets\<id>.png       area-excerpt images and thumbnails
 
 Set `MARGINMAP_DATA_DIR` to use a different folder (portable use, testing). Settings → About → *Open* shows the folder in Explorer.
 
-## Update checks
+## Releasing on GitHub
 
-*Settings → Updates → Check for updates* compares the running version with the latest published release and,
-if there is a newer one, links to its download page (nothing is downloaded or installed automatically).
-Point it at your releases in `package.json`, then rebuild:
+Releases are built and uploaded by GitHub Actions ([`.github/workflows/release.yml`](.github/workflows/release.yml)).
 
-```json
-"marginmap": { "updateUrl": "your-github-user/marginmap" }
-```
+**One-time setup**
 
-`updateUrl` is either `owner/repo` (the latest GitHub release of that repository; tag it like `v0.5.1`) or an
-https URL that returns `{ "version": "0.5.1", "url": "https://…", "notes": "…" }`.
-The `MARGINMAP_UPDATE_URL` environment variable overrides it (handy for testing).
+1. Create a public GitHub repository and push this project to it:
+   ```bash
+   git remote add origin https://github.com/<you>/marginmap.git
+   git push -u origin main
+   ```
+2. In `package.json`, replace `OWNER` (in `repository` and in `build.publish`) with your GitHub user or organization,
+   and `marginmap` with the repository name if it differs. Commit and push.
+   *(That setting is also what installed copies use to look for updates.)*
+
+**Each release**
+
+1. Set the new `version` in `package.json` (e.g. `0.5.1`), add the changes to `UpdateLog.md`, commit.
+2. Tag and push — the tag must be `v` + the version:
+   ```bash
+   git tag v0.5.1
+   git push origin main --tags
+   ```
+3. The workflow type-checks, runs the end-to-end tests on Windows, builds, and uploads to a **draft** release:
+   `MarginMap-Setup-0.5.1.exe` (installer), its `.blockmap`, `latest.yml` (read by the updater) and
+   `MarginMap-0.5.1-portable.exe`.
+4. On GitHub → Releases, open the draft, write the notes (they are shown in the app), and **Publish**.
+   Installed copies see the update from that moment on.
+
+To publish from your own PC instead, set a GitHub token with `repo` scope and run `npm run release`
+(`$env:GH_TOKEN="…"; npm run release` in PowerShell).
+
+The builds are not code-signed, so Windows SmartScreen asks for confirmation on the first install.
+Updates install without that prompt.
+
+## In-app updates
+
+*Settings → Updates* checks the latest **published** GitHub release (also automatically once a day at startup,
+which can be switched off).
+
+- **Installed copy** (`MarginMap-Setup-….exe`): *Download update* fetches the new installer in the background
+  (only the changed parts when possible, thanks to the `.blockmap`), then *Restart and install* closes MarginMap,
+  installs silently and starts the new version. Quitting the app after downloading installs it as well.
+  Your library is never touched — it lives in `%APPDATA%\MarginMap`.
+- **Portable copy**: it can't replace itself, so it only reports the new version and opens the release page.
+
+Implementation: [`electron/autoUpdate.ts`](electron/autoUpdate.ts) (electron-updater, installed copies) and
+[`electron/updates.ts`](electron/updates.ts) (notify-only check). The updater writes a log to
+`%APPDATA%\MarginMap\logs\updater.log`.
+
+For testing, two environment variables override the source:
+`MARGINMAP_UPDATE_GENERIC=http://host/folder/` makes an installed copy update from a folder containing
+`latest.yml` and the installer, and `MARGINMAP_UPDATE_URL` (`owner/repo` or a JSON URL returning
+`{ "version", "url", "notes" }`) forces the notify-only check.
 
 ## Architecture
 
 ```
 electron/main.ts      window, app:// protocol, file storage over IPC, single-instance + "Open with"
-electron/updates.ts   "Check for updates" (GitHub releases or a JSON feed)
+electron/autoUpdate.ts in-app updates for the installed build (electron-updater)
+electron/updates.ts   notify-only update check (portable build, development)
 electron/preload.ts   the narrow API exposed to the UI (contextIsolation + sandbox on)
 src/backend/          storage interface: Electron IPC, or IndexedDB in the browser build
 src/store/            zustand stores — library, open notebook (undo history, selection, groups),

@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webFrame } from 'electron';
-import type { AppInfo, UpdateResult } from '../src/backend';
+import type { AppInfo, UpdateEvent, UpdateResult } from '../src/backend';
 
 type OpenFile = { name: string; bytes: Uint8Array };
 
@@ -32,6 +32,15 @@ const api = {
   },
   appInfo: (): Promise<AppInfo> => ipcRenderer.invoke('app:info'),
   checkForUpdates: (): Promise<UpdateResult> => ipcRenderer.invoke('updates:check'),
+  downloadUpdate: (): Promise<void> => ipcRenderer.invoke('updates:download'),
+  installUpdate: (): Promise<void> => ipcRenderer.invoke('updates:install'),
+  onUpdateEvent: (cb: (e: UpdateEvent) => void) => {
+    const handler = (_e: unknown, ev: UpdateEvent) => cb(ev);
+    ipcRenderer.on('updates:event', handler);
+    return () => {
+      ipcRenderer.removeListener('updates:event', handler);
+    };
+  },
   openDataDir: (): Promise<void> => ipcRenderer.invoke('app:openDataDir'),
 };
 

@@ -248,15 +248,76 @@ function MathPage() {
   );
 }
 
+function formatBytes(n: number) {
+  return n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`;
+}
+
 function UpdatesPage() {
   const s = useSettings();
-  const { checking, result, checkedAt, check } = useUpdates();
+  const { phase, result, checkedAt, progress, downloadError, check, download, install } = useUpdates();
   const [info, setInfo] = useState<AppInfo | null>(null);
   useEffect(() => {
     void backend.appInfo().then(setInfo);
   }, []);
   const version = info?.version ?? __APP_VERSION__;
-  const unconfigured = isElectron && info && !info.updateSource;
+  const auto = info?.updateMode === 'auto';
+  const unconfigured = isElectron && info?.updateMode === 'none';
+  const found = result?.status === 'available' && (phase === 'available' || phase === 'downloading' || phase === 'ready');
+  const released = result?.publishedAt ? ` (released ${formatDate(Date.parse(result.publishedAt))})` : '';
+
+  const status =
+    phase === 'checking'
+      ? 'Checking for updates…'
+      : phase === 'downloading'
+        ? `Downloading ${result?.latest}… ${Math.round(progress?.percent ?? 0)}%${progress?.bytesPerSecond ? ` · ${formatBytes(progress.bytesPerSecond)}/s` : ''}`
+        : phase === 'ready'
+          ? `Version ${result?.latest} is downloaded. Restart MarginMap to install it.`
+          : !result
+            ? checkedAt || s.lastUpdateCheck
+              ? `Last checked ${formatDate(checkedAt || s.lastUpdateCheck)}`
+              : 'Not checked yet'
+            : result.status === 'available'
+              ? `Version ${result.latest} is available${released}.`
+              : result.status === 'current'
+                ? `You're up to date${result.latest ? ` — ${result.latest} is the latest version` : ''}.`
+                : result.status === 'unconfigured'
+                  ? 'This build has no update source configured.'
+                  : result.status === 'unsupported'
+                    ? 'Update checks are available in the desktop app.'
+                    : `Could not check for updates: ${result.error}`;
+
+  let action: ReactNode;
+  if (phase === 'ready') {
+    action = (
+      <button className="btn primary" onClick={() => void install()}>
+        <Icon name="refresh" size={16} /> Restart and install
+      </button>
+    );
+  } else if (phase === 'downloading') {
+    action = (
+      <button className="btn outline" disabled>
+        Downloading…
+      </button>
+    );
+  } else if (found && result?.canInstall) {
+    action = (
+      <button className="btn primary" onClick={() => void download()}>
+        <Icon name="import" size={16} /> Download update
+      </button>
+    );
+  } else if (found && result?.url) {
+    action = (
+      <button className="btn primary" onClick={() => window.open(result.url, '_blank')}>
+        <Icon name="import" size={16} /> Download page
+      </button>
+    );
+  } else {
+    action = (
+      <button className="btn outline" disabled={phase === 'checking' || !isElectron || unconfigured} onClick={() => void check()}>
+        <Icon name="refresh" size={16} /> {phase === 'checking' ? 'Checking…' : 'Check for updates'}
+      </button>
+    );
+  }
 
   return (
     <>
@@ -266,53 +327,46 @@ function UpdatesPage() {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 650, fontSize: 15 }}>MarginMap {version}</div>
-          <div className="set-hint update-status">
-            {checking
-              ? 'Checking for updates…'
-              : !result
-                ? checkedAt || s.lastUpdateCheck
-                  ? `Last checked ${formatDate(checkedAt || s.lastUpdateCheck)}`
-                  : 'Not checked yet'
-                : result.status === 'available'
-                  ? `Version ${result.latest} is available${result.publishedAt ? ` (released ${formatDate(Date.parse(result.publishedAt))})` : ''}.`
-                  : result.status === 'current'
-                    ? `You're up to date${result.latest ? ` — ${result.latest} is the latest version` : ''}.`
-                    : result.status === 'unconfigured'
-                      ? 'This build has no update source configured.'
-                      : result.status === 'unsupported'
-                        ? 'Update checks are available in the desktop app.'
-                        : `Could not check for updates: ${result.error}`}
-          </div>
+          <div className="set-hint update-status">{status}</div>
+          {phase === 'downloading' && (
+            <div className="progress-bar update-progress">
+              <div style={{ width: `${progress?.percent ?? 0}%` }} />
+            </div>
+          )}
         </div>
-        {result?.status === 'available' && result.url ? (
-          <button className="btn primary" onClick={() => window.open(result.url, '_blank')}>
-            <Icon name="import" size={16} /> Download
-          </button>
-        ) : (
-          <button className="btn outline" disabled={checking || !isElectron} onClick={() => void check()}>
-            <Icon name="refresh" size={16} /> {checking ? 'Checking…' : 'Check for updates'}
-          </button>
-        )}
+        {action}
       </div>
-      {result?.status === 'available' && result.notes && (
+      {downloadError && <p className="set-hint update-error">Download failed: {downloadError}</p>}
+      {found && result?.notes && (
         <div className="field">
-          <label>What's new</label>
+          <label>What's new in {result.latest}</label>
           <div className="release-notes">{result.notes}</div>
         </div>
       )}
-      {result?.status === 'available' && (
-        <p className="set-hint">The download page opens in your browser. Install the new version over this one — your library is kept.</p>
+      {found && (
+        <p className="set-hint">
+          {result?.canInstall
+            ? 'The update downloads in the background; MarginMap then restarts to install it. Your library is kept.'
+            : 'This copy of MarginMap can’t update itself (portable version) — the download page opens in your browser. Your library is kept.'}
+        </p>
       )}
-      <Row title="Check automatically" hint="Look for a new version when MarginMap starts (at most once a day). Nothing is installed without you.">
+      <Row
+        title="Check automatically"
+        hint={`Look for a new version when MarginMap starts (at most once a day).${auto ? ' Updates download only when you choose to.' : ''}`}
+      >
         <Switch on={s.autoUpdate} label="Check automatically" onChange={(autoUpdate) => s.set({ autoUpdate })} />
       </Row>
-      {info?.updateSource && <Row title="Update source" hint={info.updateSource}>{null}</Row>}
+      {info?.updateSource && (
+        <Row title="Update source" hint={info.updateSource}>
+          {auto ? 'In-app updates' : 'Download page'}
+        </Row>
+      )}
       {unconfigured && (
         <div className="set-note">
           <Icon name="info" size={15} />
           <div>
-            To enable update checks, set <code>marginmap.updateUrl</code> in <code>package.json</code> to your GitHub repository (<code>owner/repo</code>) or to a
-            JSON feed URL, then rebuild.
+            To enable updates, set <code>owner</code> and <code>repo</code> under <code>build.publish</code> in <code>package.json</code> to your GitHub
+            repository, then build a release.
           </div>
         </div>
       )}
