@@ -1,4 +1,4 @@
-# Current version: v0.5.0
+# Current version: v0.5.1
 --------------------------------------------------
 
 # v0.1.0 -> v0.5.0
@@ -46,3 +46,9 @@ Status: all items done in v0.5.0 (2026-10-14). `npm run test:e2e` covers each of
 
 1. Selected data folder
 
+# v0.5.1 -> v0.5.2
+
+## problems
+
+1. click a card to enlarge -> double click a card to enlarge
+2. only picture excerpt enlarge, text don't enlarge.
