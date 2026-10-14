@@ -18,7 +18,7 @@
     "test:e2e": "npm run build && node tests/smoke.mjs",
     "release": "npm run build && electron-builder --win --publish always"
   },
-  "repository": "github:OWNER/marginmap",
+  "repository": "github:suldl/MarginMap",
   "build": {
     "appId": "app.marginmap.desktop",
     "electronDist": "node_modules/electron/dist",
@@ -56,8 +56,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "OWNER",
-        "repo": "marginmap",
+        "owner": "suldl",
+        "repo": "MarginMap",
         "releaseType": "draft"
       }
     ]

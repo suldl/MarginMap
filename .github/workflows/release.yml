@@ -37,6 +37,12 @@ jobs:
       - name: Install
         run: npm ci
 
+      # The runner's desktop is 1024x768; the tests drive a 1440x900 window.
+      - name: Larger screen for the tests
+        shell: pwsh
+        continue-on-error: true
+        run: Set-DisplayResolution -Width 1920 -Height 1080 -Force
+
       - name: End-to-end tests
         run: npm run test:e2e
 
