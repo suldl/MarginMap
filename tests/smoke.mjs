@@ -527,5 +527,115 @@ check('drag & drop re-parenting persisted', !!parent?.imageId);
   check('formula notes saved', kid?.comment === '$\\frac{a}{b}$');
 }
 
+// ---- pass 5 (v0.5.1): choose the data folder — move it, move it back, start a new library, switch ----
+const locationFile = path.join(dataDir, 'data-location.json');
+const libFiles = (dir) => ['docs', 'notebooks', 'assets', 'library.json'].filter((e) => fs.existsSync(path.join(dir, e)));
+const libraryBefore = libFiles(dataDir).join();
+{
+  const moved = path.join(outDir, 'Moved library');
+  const fresh = path.join(outDir, 'Second library');
+  const docCount = fs.readdirSync(path.join(dataDir, 'docs')).length;
+  const { app, win } = await launch();
+  // The native folder picker can't be driven from a test, so answer it from the main process.
+  const answerFolderDialog = (dir) =>
+    app.evaluate(({ dialog }, d) => {
+      dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [d] });
+    }, dir);
+  const openDataPage = async () => {
+    if (!(await win.locator('.modal.settings').count())) await win.keyboard.press('Control+,');
+    await win.locator('.settings-tab', { hasText: 'Data' }).click();
+    await win.waitForSelector('.set-row .data-path');
+  };
+  const shownFolder = () => win.locator('.set-row', { hasText: 'Data folder' }).locator('.data-path').textContent();
+  // Toasts outlive the reload that follows a change, so wait for the one naming the new folder.
+  const toast = (text) => win.locator('.toast', { hasText: text }).waitFor({ timeout: 20000 });
+  const closeSettings = async () => {
+    await win.keyboard.press('Escape');
+    await win.waitForSelector('.modal.settings', { state: 'detached' });
+  };
+  try {
+    const tiles = await win.locator('.tile').count();
+    await openDataPage();
+    check('Settings → Data shows the data folder', (await shownFolder()) === dataDir);
+    await shot(win, 'settings-data');
+
+    // Move the library into an empty folder.
+    await answerFolderDialog(moved);
+    await win.locator('.set-row', { hasText: 'Data folder' }).locator('button', { hasText: 'Change' }).click();
+    await win.waitForSelector('.modal.data-folder');
+    check('an empty folder offers to move the library', await win.locator('.data-option.on', { hasText: 'Move my library here' }).isVisible());
+    await win.waitForTimeout(300); // let the dialog finish fading in
+    await shot(win, 'data-move');
+    await win.locator('.modal.data-folder button', { hasText: 'Move library' }).click();
+    await toast(`Library moved to ${moved}`);
+    check('library files are moved to the new folder', libFiles(moved).join() === libraryBefore && fs.readdirSync(path.join(moved, 'docs')).length === docCount);
+    check('the old folder no longer holds the library', libFiles(dataDir).length === 0);
+    check('the choice is saved in data-location.json', JSON.parse(fs.readFileSync(locationFile, 'utf8')).dataDir === moved);
+    check('Settings reopen on the Data page with the new folder', (await shownFolder()) === moved);
+    await closeSettings();
+    check('the library reloads from the new folder', (await win.locator('.tile').count()) === tiles);
+
+    // "Use default" moves it back; the emptied folder goes away.
+    await openDataPage();
+    await win.locator('.set-row', { hasText: 'Default folder' }).locator('button').click();
+    await win.waitForSelector('.modal.data-folder');
+    await win.locator('.modal.data-folder button', { hasText: 'Move library' }).click();
+    await toast(`Library moved to ${dataDir}`);
+    check('"Use default" moves the library back', libFiles(dataDir).join() === libraryBefore && !fs.existsSync(locationFile));
+    check('the emptied folder is removed', !fs.existsSync(moved));
+
+    // Start a new, empty library elsewhere; the old one stays put.
+    await answerFolderDialog(fresh);
+    await win.locator('.set-row', { hasText: 'Data folder' }).locator('button', { hasText: 'Change' }).click();
+    await win.locator('.data-option', { hasText: 'Start a new' }).click();
+    await win.locator('.modal.data-folder button', { hasText: 'Create library' }).click();
+    await toast(`Started a new library in ${fresh}`);
+    await closeSettings();
+    check('a new library starts empty and the old one stays', (await win.locator('.tile').count()) === 0 && libFiles(dataDir).join() === libraryBefore);
+
+    // Picking a folder that holds a library opens it instead of overwriting it.
+    await answerFolderDialog(dataDir);
+    await openDataPage();
+    await win.locator('.set-row', { hasText: 'Data folder' }).locator('button', { hasText: 'Change' }).click();
+    await win.waitForSelector('.modal.data-folder');
+    check('a folder with a library offers to open it', (await win.locator('.modal.data-folder h3').textContent()).includes('Open this library'));
+    await win.locator('.modal.data-folder button', { hasText: 'Open library' }).click();
+    await toast(`Opened the library in ${dataDir}`);
+    await closeSettings();
+    check('switching back shows the old library again', (await win.locator('.tile').count()) === tiles && !fs.existsSync(locationFile));
+  } catch (err) {
+    check(`pass 5 ran without errors: ${err.message}`, false);
+    await shot(win, 'failure-pass5').catch(() => {});
+  } finally {
+    await app.close();
+  }
+}
+
+// ---- pass 6: the chosen folder has gone missing (unplugged drive) ---------------------------------
+{
+  const gone = path.join(outDir, 'Unplugged drive', 'MarginMap');
+  fs.writeFileSync(locationFile, JSON.stringify({ dataDir: gone }));
+  const { app, win } = await launch();
+  try {
+    await win.waitForSelector('.data-missing', { timeout: 10000 });
+    check('a missing data folder shows a notice, not an empty library', (await win.locator('.data-missing .data-path').textContent()) === gone);
+    await shot(win, 'data-missing');
+    await win.locator('.data-missing button', { hasText: 'Try again' }).click();
+    await win.waitForSelector('.toast.error', { timeout: 5000 });
+    check('nothing is written to the missing folder', !fs.existsSync(gone));
+    await win.locator('.data-missing button', { hasText: 'Use the default folder' }).click();
+    await win.waitForSelector('.modal.data-folder');
+    await win.locator('.modal.data-folder button', { hasText: 'Open library' }).click();
+    await win.waitForSelector('.toast:has-text("Opened the library")', { timeout: 20000 });
+    check('"Use the default folder" brings the library back', (await win.locator('.tile').count()) > 0 && !fs.existsSync(locationFile));
+  } catch (err) {
+    check(`pass 6 ran without errors: ${err.message}`, false);
+    await shot(win, 'failure-pass6').catch(() => {});
+  } finally {
+    await app.close();
+  }
+  check('the library is intact after all the moves', libFiles(dataDir).join() === libraryBefore);
+}
+
 console.log(failures ? `\n${failures} check(s) failed — see tests/output/` : '\nAll checks passed.');
 process.exit(failures ? 1 : 0);

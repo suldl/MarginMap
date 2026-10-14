@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useUi } from '../store/ui';
+import { DataFolderDialog } from './DataFolder';
 import { Settings } from './Settings';
 
 export function Overlays() {
@@ -7,6 +8,7 @@ export function Overlays() {
   return (
     <>
       {settings && <Settings section={settings} />}
+      <DataFolderDialog />
       <Dialog />
       <ContextMenu />
       <Toasts />

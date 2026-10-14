@@ -1,9 +1,11 @@
-import { useEffect } from 'react';
-import { backend, isElectron, type OpenFile } from './backend';
+import { useEffect, useState } from 'react';
+import { backend, isElectron, type DataFolderInfo, type OpenFile } from './backend';
+import { DataFolderMissing } from './components/DataFolder';
 import { importAndReport, Library } from './components/Library';
 import { Overlays } from './components/Overlays';
 import { Review } from './components/Review';
 import { Study } from './components/Study';
+import { announceDataFolderChange } from './store/dataFolder';
 import { useLibrary } from './store/library';
 import { applyAppearance, syncTitleBar } from './store/settings';
 import { useUi } from './store/ui';
@@ -21,20 +23,33 @@ async function openIncoming(files: OpenFile[]) {
 export function App() {
   const route = useUi((s) => s.route);
   const loaded = useLibrary((s) => s.loaded);
+  /** Set when the chosen data folder can't be found; the library waits until it is back or another one is chosen. */
+  const [missing, setMissing] = useState<DataFolderInfo | null>(null);
+
+  /** Loads the library unless its folder is missing. Returns false in that case. */
+  const start = async () => {
+    const folder = await backend.dataFolder();
+    if (folder && !folder.available) {
+      setMissing(folder);
+      return false;
+    }
+    setMissing(null);
+    try {
+      await useLibrary.getState().load();
+      announceDataFolderChange();
+      await openIncoming(await backend.takeOpenFiles());
+      setTimeout(() => void autoCheckForUpdates(), 4000);
+    } catch (err) {
+      console.error(err);
+      useUi.getState().toast(`Could not load your library: ${(err as Error).message}`, 'error');
+    }
+    return true;
+  };
 
   useEffect(() => {
     if (isElectron) document.documentElement.classList.add('is-electron');
     applyAppearance();
-    void useLibrary
-      .getState()
-      .load()
-      .then(() => backend.takeOpenFiles())
-      .then(openIncoming)
-      .then(() => setTimeout(() => void autoCheckForUpdates(), 4000))
-      .catch((err) => {
-        console.error(err);
-        useUi.getState().toast(`Could not load your library: ${(err as Error).message}`, 'error');
-      });
+    void start();
     const off = backend.onOpenFiles((files) => void openIncoming(files));
     const offUpdates = initUpdates();
 
@@ -68,7 +83,9 @@ export function App() {
 
   return (
     <div className="app">
-      {!loaded ? (
+      {missing ? (
+        <DataFolderMissing info={missing} onRetry={start} />
+      ) : !loaded ? (
         <div className="loading">
           <div className="spinner" />
         </div>

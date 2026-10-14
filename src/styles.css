@@ -2204,6 +2204,109 @@ select {
   user-select: text;
 }
 
+/* Data folder: change dialog and the "folder missing" screen */
+.modal.data-folder {
+  width: min(500px, calc(100vw - 32px));
+}
+.data-target {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-2);
+  font-size: 12.5px;
+}
+.data-target > svg {
+  flex: none;
+  color: var(--accent);
+}
+.data-target .data-path {
+  flex: 1;
+  min-width: 0;
+}
+.data-tag {
+  flex: none;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+}
+.data-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.data-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.data-option:hover {
+  background: var(--hover);
+}
+.data-option.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.data-option input {
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+}
+.data-progress {
+  flex: none;
+}
+.data-missing {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.data-missing-card {
+  width: min(520px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+.data-missing-card h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+}
+.data-missing-card p {
+  margin: 0;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+.data-missing-card .data-target {
+  align-self: stretch;
+}
+.data-missing-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.data-missing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
 /* ------------------------------------------------------------------ */
 /* Formulas (KaTeX) and LaTeX autocomplete                            */
 /* ------------------------------------------------------------------ */

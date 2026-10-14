@@ -33,5 +33,9 @@ export function createElectronBackend(api: ElectronApi): Backend {
     installUpdate: () => api.installUpdate(),
     onUpdateEvent: (cb) => api.onUpdateEvent(cb),
     openDataDir: () => api.openDataDir(),
+    dataFolder: () => api.dataFolder(),
+    pickDataFolder: (useDefault) => api.pickDataFolder(useDefault),
+    changeDataFolder: (dir, mode) => api.changeDataFolder(dir, mode),
+    onDataProgress: (cb) => api.onDataProgress(cb),
   };
 }

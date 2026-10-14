@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webFrame } from 'electron';
-import type { AppInfo, UpdateEvent, UpdateResult } from '../src/backend';
+import type { AppInfo, DataChangeMode, DataChangeResult, DataFolderInfo, DataFolderPick, DataProgress, UpdateEvent, UpdateResult } from '../src/backend';
 
 type OpenFile = { name: string; bytes: Uint8Array };
 
@@ -42,6 +42,16 @@ const api = {
     };
   },
   openDataDir: (): Promise<void> => ipcRenderer.invoke('app:openDataDir'),
+  dataFolder: (): Promise<DataFolderInfo> => ipcRenderer.invoke('data:status'),
+  pickDataFolder: (useDefault: boolean): Promise<DataFolderPick | null> => ipcRenderer.invoke('data:pick', useDefault),
+  changeDataFolder: (dir: string, mode: DataChangeMode): Promise<DataChangeResult> => ipcRenderer.invoke('data:change', dir, mode),
+  onDataProgress: (cb: (p: DataProgress) => void) => {
+    const handler = (_e: unknown, p: DataProgress) => cb(p);
+    ipcRenderer.on('data:progress', handler);
+    return () => {
+      ipcRenderer.removeListener('data:progress', handler);
+    };
+  },
 };
 
 export type ElectronApi = typeof api;

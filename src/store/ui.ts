@@ -42,7 +42,7 @@ export interface MenuItem {
   render?: (close: () => void) => ReactNode;
 }
 
-export type SettingsSection = 'appearance' | 'maps' | 'math' | 'updates' | 'shortcuts' | 'about';
+export type SettingsSection = 'appearance' | 'maps' | 'math' | 'data' | 'updates' | 'shortcuts' | 'about';
 
 interface UiState {
   route: Route;

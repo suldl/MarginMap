@@ -24,7 +24,7 @@ A MarginNote-style study app for Windows. It covers the core MarginNote workflow
 | **Card panel** | Title, color, editable excerpt, notes, tags, source link, review toggle |
 | **Review** | Spaced repetition (SM-2, Anki-like): Again / Hard / Good / Easy, per notebook or across all notebooks |
 | **Export** | Markdown, OPML (importable by mind-map apps such as XMind and MindNode), JSON backup |
-| **Settings** | Theme (system/light/dark), accent color, interface size, canvas background, connector style, drag behavior, formula options (**Ctrl+,**) |
+| **Settings** | Theme (system/light/dark), accent color, interface size, canvas background, connector style, drag behavior, formula options, data folder (**Ctrl+,**) |
 | **Updates** | In-app updates from GitHub releases: download in the background, restart to install — see [In-app updates](#in-app-updates) |
 | **Comfort** | Undo/redo for all card, group and whiteboard edits, middle-click to close document tabs, native window controls, auto-save |
 
@@ -43,7 +43,7 @@ Build the Windows installer and a portable `.exe` (written to `release/`):
 npm run dist
 ```
 
-`release/MarginMap-Setup-0.5.0.exe` is a normal installer (it can update itself). `release/MarginMap-0.5.0-portable.exe` runs without installing.
+`release/MarginMap-Setup-0.5.1.exe` is a normal installer (it can update itself). `release/MarginMap-0.5.1-portable.exe` runs without installing.
 To publish a release on GitHub, see [Releasing on GitHub](#releasing-on-github).
 The builds are unsigned, so Windows SmartScreen will ask for confirmation the first time.
 
@@ -53,7 +53,7 @@ Other scripts:
 | --- | --- |
 | `npm run dev:web` | UI only, in a browser (stores data in IndexedDB) — handy for UI work |
 | `npm run typecheck` | TypeScript check |
-| `npm run test:e2e` | Builds, then drives the real Electron app through import → excerpt → map → review → whiteboard → settings, updates, formulas, selection, groups (screenshots in `tests/output/`) |
+| `npm run test:e2e` | Builds, then drives the real Electron app through import → excerpt → map → review → whiteboard → settings, updates, formulas, selection, groups, data folder (screenshots in `tests/output/`) |
 | `node scripts/check-latex.mjs` | Checks that every LaTeX autocomplete suggestion renders in KaTeX |
 | `npm run dist:dir` | Unpacked build in `release/win-unpacked/` (faster than a full installer) |
 
@@ -85,7 +85,7 @@ Other scripts:
 
 ## Where your data lives
 
-Everything is stored locally in `%APPDATA%\MarginMap`:
+By default everything is stored locally in `%APPDATA%\MarginMap`:
 
 ```
 library.json          documents + notebooks index
@@ -94,7 +94,19 @@ notebooks\<id>.json   cards, mind map, whiteboard and review state
 assets\<id>.png       area-excerpt images and thumbnails
 ```
 
-Set `MARGINMAP_DATA_DIR` to use a different folder (portable use, testing). Settings → About → *Open* shows the folder in Explorer.
+**Settings → Data** shows the folder (*Open* opens it in Explorer) and lets you choose another one with *Change…* —
+another drive, a USB stick, or a folder that OneDrive/Dropbox backs up. When the new folder is empty you can
+**move** your library there (copied, checked, then removed from the old folder) or start a **new, empty library**;
+if it already holds a MarginMap library, MarginMap **opens** that one instead, so you can keep several libraries
+and switch between them. A non-empty folder or a drive root gets a `MarginMap` subfolder. *Use default* goes back
+to `%APPDATA%\MarginMap`.
+
+The choice is saved in `%APPDATA%\MarginMap\data-location.json`; settings and logs always stay in `%APPDATA%\MarginMap`.
+If the chosen folder can't be found at startup (drive unplugged, network share offline), MarginMap says so and
+waits — *Try again*, choose another folder, or use the default one — instead of starting an empty library.
+Don't open the same synced library on two computers at once.
+
+`MARGINMAP_DATA_DIR` replaces `%APPDATA%\MarginMap` itself (settings included) — handy for portable use and testing.
 
 ## Releasing on GitHub
 
@@ -113,15 +125,15 @@ Releases are built and uploaded by GitHub Actions ([`.github/workflows/release.y
 
 **Each release**
 
-1. Set the new `version` in `package.json` (e.g. `0.5.1`), add the changes to `UpdateLog.md`, commit.
+1. Set the new `version` in `package.json` (e.g. `0.5.2`), add the changes to `UpdateLog.md`, commit.
 2. Tag and push — the tag must be `v` + the version:
    ```bash
-   git tag v0.5.1
+   git tag v0.5.2
    git push origin main --tags
    ```
 3. The workflow type-checks, runs the end-to-end tests on Windows, builds, and uploads to a **draft** release:
-   `MarginMap-Setup-0.5.1.exe` (installer), its `.blockmap`, `latest.yml` (read by the updater) and
-   `MarginMap-0.5.1-portable.exe`.
+   `MarginMap-Setup-0.5.2.exe` (installer), its `.blockmap`, `latest.yml` (read by the updater) and
+   `MarginMap-0.5.2-portable.exe`.
 4. On GitHub → Releases, open the draft, write the notes (they are shown in the app), and **Publish**.
    Installed copies see the update from that moment on.
 
@@ -140,7 +152,7 @@ which can be switched off).
 - **Installed copy** (`MarginMap-Setup-….exe`): *Download update* fetches the new installer in the background
   (only the changed parts when possible, thanks to the `.blockmap`), then *Restart and install* closes MarginMap,
   installs silently and starts the new version. Quitting the app after downloading installs it as well.
-  Your library is never touched — it lives in `%APPDATA%\MarginMap`.
+  Your library is never touched — it lives in its data folder.
 - **Portable copy**: it can't replace itself, so it only reports the new version and opens the release page.
 
 Implementation: [`electron/autoUpdate.ts`](electron/autoUpdate.ts) (electron-updater, installed copies) and
@@ -156,6 +168,7 @@ For testing, two environment variables override the source:
 
 ```
 electron/main.ts      window, app:// protocol, file storage over IPC, single-instance + "Open with"
+electron/dataDir.ts   where the library lives: choosing, moving or switching the data folder
 electron/autoUpdate.ts in-app updates for the installed build (electron-updater)
 electron/updates.ts   notify-only update check (portable build, development)
 electron/preload.ts   the narrow API exposed to the UI (contextIsolation + sandbox on)

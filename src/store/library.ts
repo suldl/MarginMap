@@ -28,6 +28,11 @@ function persist(get: () => LibraryState) {
   saveChain = saveChain.then(() => backend.saveLibrary(data)).catch((err) => console.error('saveLibrary', err));
 }
 
+/** Resolves once the last library save has reached the disk. */
+export function waitForLibrarySave(): Promise<void> {
+  return saveChain;
+}
+
 export function notebookMeta(nb: Notebook, prev?: NotebookMeta): NotebookMeta {
   const cards = Object.values(nb.cards);
   return {
