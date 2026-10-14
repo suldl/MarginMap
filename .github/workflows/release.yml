@@ -53,8 +53,27 @@ jobs:
           name: e2e-output
           path: tests/output/*.png
 
-      # test:e2e already ran the production build; package and upload it.
-      - name: Package and publish
-        run: npx electron-builder --win --publish always
+      # test:e2e already ran the production build; package it. electron-builder does not upload:
+      # its GitHub publisher can create several drafts for one tag when files arrive together.
+      - name: Package
+        run: npx electron-builder --win --publish never
+
+      # One upload, so all four files land in the same draft release.
+      - name: Upload to a draft release
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version=$(node -p "require('./package.json').version")
+          files=(
+            "release/MarginMap-Setup-$version.exe"
+            "release/MarginMap-Setup-$version.exe.blockmap"
+            "release/latest.yml"
+            "release/MarginMap-$version-portable.exe"
+          )
+          ls -l "${files[@]}"
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "${files[@]}" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "${files[@]}" --draft --title "MarginMap $version" --notes ""
+          fi

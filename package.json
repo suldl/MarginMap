@@ -15,8 +15,7 @@
     "start": "electron .",
     "dist": "npm run build && electron-builder --win",
     "dist:dir": "npm run build && electron-builder --win --dir",
-    "test:e2e": "npm run build && node tests/smoke.mjs",
-    "release": "npm run build && electron-builder --win --publish always"
+    "test:e2e": "npm run build && node tests/smoke.mjs"
   },
   "repository": "github:suldl/MarginMap",
   "build": {

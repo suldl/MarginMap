@@ -56,7 +56,6 @@ Other scripts:
 | `npm run test:e2e` | Builds, then drives the real Electron app through import → excerpt → map → review → whiteboard → settings, updates, formulas, selection, groups (screenshots in `tests/output/`) |
 | `node scripts/check-latex.mjs` | Checks that every LaTeX autocomplete suggestion renders in KaTeX |
 | `npm run dist:dir` | Unpacked build in `release/win-unpacked/` (faster than a full installer) |
-| `npm run release` | Build and upload to a draft GitHub release (needs `GH_TOKEN`; normally done by GitHub Actions) |
 
 ## How to use it
 
@@ -126,8 +125,9 @@ Releases are built and uploaded by GitHub Actions ([`.github/workflows/release.y
 4. On GitHub → Releases, open the draft, write the notes (they are shown in the app), and **Publish**.
    Installed copies see the update from that moment on.
 
-To publish from your own PC instead, set a GitHub token with `repo` scope and run `npm run release`
-(`$env:GH_TOKEN="…"; npm run release` in PowerShell).
+electron-builder only builds the files (`--publish never`); the workflow uploads all four in one step with
+the GitHub CLI. Letting electron-builder upload can split the files across several drafts with the same tag.
+If a run fails half-way, delete its draft on GitHub, then use *Re-run all jobs* on the Actions page.
 
 The builds are not code-signed, so Windows SmartScreen asks for confirmation on the first install.
 Updates install without that prompt.
