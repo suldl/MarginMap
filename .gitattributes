@@ -1,0 +1,14 @@
+# Text files are stored with LF in the repository (Windows checkouts get CRLF).
+* text=auto
+
+# Binary assets must never be converted.
+*.pdf binary
+*.png binary
+*.ico binary
+*.jpg binary
+*.wasm binary
+*.bcmap binary
+*.pfb binary
+*.ttf binary
+*.woff binary
+*.woff2 binary

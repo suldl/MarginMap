@@ -1,0 +1,135 @@
+# MarginMap
+
+A MarginNote-style study app for Windows. It covers the core MarginNote workflow:
+**read a PDF → excerpt passages into cards → organize them as a mind map → review them as flashcards.**
+
+> MarginMap is an independent, from-scratch implementation inspired by MarginNote's workflow.
+> It does not use or contain any MarginNote code or assets, and it can't open MarginNote files.
+
+## Features
+
+| Area | What you get |
+| --- | --- |
+| **Library** | Import PDFs (button, drag & drop, or *Open with…* from Explorer), cover thumbnails, duplicate detection, notebooks that can hold several documents |
+| **Reader** | Fast lazy-rendered pages (pdf.js), crisp at any zoom, fit-width mode, Ctrl+wheel zoom, table of contents, full-text search, bundled CJK character maps |
+| **Excerpts** | Select text → choose a color → it becomes a highlighted card. **Area excerpts** capture figures, formulas and tables as images (and remember the text under them for search) |
+| **Mind map** | Horizontal tree with pan/zoom, drag & drop to reparent or reorder, collapse/expand, find (Ctrl+F), right-click menu, keyboard editing. Click a card to see it **enlarged** (full text, big image, notes) |
+| **Free placement** | Drag a card into empty space and it stays there, still connected to its parent (Alt = detach as an independent card). Double-click anywhere to put a new card on that spot. *Tidy up* returns everything to the automatic layout |
+| **Selection & groups** | Drag a selection box over cards, Ctrl/Shift+click to add, Ctrl+A for all. Move, recolor, tag, review or delete them together. **Ctrl+G** groups them into a named, colored frame (also shown on the whiteboard) |
+| **Classify & filter** | Filter the map by color, tag, group or status (in review, due, has notes, image, placed freely) and select every match; tag several cards at once |
+| **Formulas** | LaTeX in titles, excerpts, notes and whiteboard text — `$…$` inline, `$$…$$` display — rendered with KaTeX. Typing `\` suggests commands with live previews; Tab jumps between the `{}` slots of `\frac{}{}` and friends |
+| **Whiteboard** | A free canvas per notebook: drag cards anywhere, draw with pen and highlighter, add rectangles, ellipses, text and arrows that stay connected to cards as you move them. **E** toggles pen ⇄ eraser; works with pen tablets (the eraser end of a pen erases too) |
+| **Two-way links** | Click a card → the document jumps to the excerpt and flashes it. Click a highlight in the PDF → its card is selected in the map |
+| **Outline** | The same cards as an indented outline, with drag & drop and Tab / Shift+Tab indent/outdent |
+| **Card panel** | Title, color, editable excerpt, notes, tags, source link, review toggle |
+| **Review** | Spaced repetition (SM-2, Anki-like): Again / Hard / Good / Easy, per notebook or across all notebooks |
+| **Export** | Markdown, OPML (importable by mind-map apps such as XMind and MindNode), JSON backup |
+| **Settings** | Theme (system/light/dark), accent color, interface size, canvas background, connector style, drag behavior, formula options (**Ctrl+,**) |
+| **Updates** | *Check for updates* (manually or once a day at startup) against your GitHub releases — see [Update checks](#update-checks) |
+| **Comfort** | Undo/redo for all card, group and whiteboard edits, middle-click to close document tabs, native window controls, auto-save |
+
+## Getting started
+
+Requirements: Windows 10/11 and Node.js 22.12+.
+
+```bash
+npm install
+npm run dev        # Electron app with hot reload
+```
+
+Build the Windows installer and a portable `.exe` (written to `release/`):
+
+```bash
+npm run dist
+```
+
+`release/MarginMap Setup 0.5.0.exe` is a normal installer. `release/MarginMap 0.5.0.exe` runs without installing.
+The builds are unsigned, so Windows SmartScreen will ask for confirmation the first time.
+
+Other scripts:
+
+| Script | Purpose |
+| --- | --- |
+| `npm run dev:web` | UI only, in a browser (stores data in IndexedDB) — handy for UI work |
+| `npm run typecheck` | TypeScript check |
+| `npm run test:e2e` | Builds, then drives the real Electron app through import → excerpt → map → review → whiteboard → settings, updates, formulas, selection, groups (screenshots in `tests/output/`) |
+| `node scripts/check-latex.mjs` | Checks that every LaTeX autocomplete suggestion renders in KaTeX |
+| `npm run dist:dir` | Unpacked build in `release/win-unpacked/` (faster than a full installer) |
+
+## How to use it
+
+1. **Import** a PDF and click it — a notebook is created for it.
+2. **Select text** in the document; in the popup pick a color to excerpt it as a card.
+   Use the **area tool** (dashed-square icon) and drag a box to capture a figure.
+3. **Select a card first** and new excerpts are added as its children — a quick way to build a hierarchy while reading.
+4. **Organize** in the mind map: drag cards onto each other (middle = child, top/bottom edge = sibling), into empty space to place them freely, or use the keyboard.
+   Drag across empty space to select several cards, then **Ctrl+G** to group them; the funnel button filters by color, tag, group or status.
+   Write formulas as `$E=mc^2$` anywhere in a card.
+   Or switch to the **whiteboard** (third view button) to arrange cards freely, sketch and connect them with arrows.
+   Open the **Cards** panel there to drag cards in, and new excerpts land on the board while it is open.
+5. **Review**: switch on *Review as flashcard* in the card panel (or right-click → *Add with all children to review*), then press **Review**.
+
+### Keyboard shortcuts
+
+| Where | Keys |
+| --- | --- |
+| Mind map | `Tab` add child · `Enter` add sibling · `F2` / double-click rename · `Del` delete selected · arrows navigate · `Space` locate in document · `Ctrl+F` find · `Ctrl+A` select all · `Ctrl+G` / `Ctrl+Shift+G` group / ungroup · drag empty space to select · right- or middle-drag to pan · double-click empty space for a new card there · `Esc` deselect |
+| Whiteboard | `V` select · `H` pan (or hold `Space`) · `P` pen · `M` highlighter · `E` eraser (press again: back to the pen) · `R` rectangle · `O` ellipse · `A` arrow · `T` text · `Ctrl+G` group cards · `Del` remove · arrows nudge · double-click empty space for a new card |
+| Formulas | `\` + letters: command suggestions · `↑`/`↓` choose · `Enter`/`Tab` insert · `Tab` next `{}` slot |
+| Anywhere | `Ctrl+,` settings |
+| Outline | `Tab` / `Shift+Tab` indent / outdent · `Alt+↑/↓` move · `Enter` new sibling · arrows navigate |
+| Reader | `Ctrl+F` search · `Ctrl+=` / `Ctrl+-` zoom · `Ctrl+0` fit width · `Esc` cancel |
+| Anywhere in a notebook | `Ctrl+Z` undo · `Ctrl+Y` / `Ctrl+Shift+Z` redo |
+| Review | `Space` show answer · `1`–`4` grade |
+
+## Where your data lives
+
+Everything is stored locally in `%APPDATA%\MarginMap`:
+
+```
+library.json          documents + notebooks index
+docs\<id>.pdf         imported PDFs (copies)
+notebooks\<id>.json   cards, mind map, whiteboard and review state
+assets\<id>.png       area-excerpt images and thumbnails
+```
+
+Set `MARGINMAP_DATA_DIR` to use a different folder (portable use, testing). Settings → About → *Open* shows the folder in Explorer.
+
+## Update checks
+
+*Settings → Updates → Check for updates* compares the running version with the latest published release and,
+if there is a newer one, links to its download page (nothing is downloaded or installed automatically).
+Point it at your releases in `package.json`, then rebuild:
+
+```json
+"marginmap": { "updateUrl": "your-github-user/marginmap" }
+```
+
+`updateUrl` is either `owner/repo` (the latest GitHub release of that repository; tag it like `v0.5.1`) or an
+https URL that returns `{ "version": "0.5.1", "url": "https://…", "notes": "…" }`.
+The `MARGINMAP_UPDATE_URL` environment variable overrides it (handy for testing).
+
+## Architecture
+
+```
+electron/main.ts      window, app:// protocol, file storage over IPC, single-instance + "Open with"
+electron/updates.ts   "Check for updates" (GitHub releases or a JSON feed)
+electron/preload.ts   the narrow API exposed to the UI (contextIsolation + sandbox on)
+src/backend/          storage interface: Electron IPC, or IndexedDB in the browser build
+src/store/            zustand stores — library, open notebook (undo history, selection, groups),
+                      study-view UI, settings, update checks
+src/components/
+  reader/             pdf.js pages, text/area excerpting, highlights, ToC + search sidebar
+  mindmap/            tree + free-placement layout, pan/zoom canvas, selection box, drag & drop, groups, filter
+  whiteboard/         free canvas: cards, ink, shapes, text, arrows, group frames
+  Settings, LatexAssist, MathText, Outline, Inspector, Review, Library, Study
+src/lib/              pdf helpers, tree utilities, SM-2 scheduler, Markdown/OPML export, LaTeX (KaTeX) helpers
+```
+
+The stack is Electron 44, React 19, TypeScript, Vite 7, pdf.js 5, KaTeX 0.16 and zustand.
+
+## Not (yet) implemented
+
+Compared with MarginNote 4, MarginMap doesn't have EPUB support, pen annotations directly on the PDF, cloud sync,
+OCR for scanned PDFs, or card-to-card links inside the mind map (the whiteboard's arrows cover part of that).
+The data model (`src/types.ts`) leaves room for these.

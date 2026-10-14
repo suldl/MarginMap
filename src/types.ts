@@ -1,0 +1,182 @@
+export const COLORS = ['yellow', 'green', 'blue', 'red', 'purple', 'orange', 'gray'] as const;
+export type ColorKey = (typeof COLORS)[number];
+
+/** A rectangle on a page, normalized to 0..1 of the page's width/height. */
+export interface PageRect {
+  page: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** Where a card's excerpt came from in a document. */
+export interface SourceAnchor {
+  docId: string;
+  page: number;
+  kind: 'text' | 'area';
+  rects: PageRect[];
+}
+
+export interface ReviewState {
+  due: number;
+  interval: number; // days
+  ease: number;
+  reps: number;
+  lapses: number;
+  last?: number;
+}
+
+export interface Card {
+  id: string;
+  parentId: string | null;
+  order: number;
+  title: string;
+  excerpt: string;
+  /** Text found under an area excerpt; used for search/export, not shown on the card. */
+  imageText?: string;
+  imageId?: string;
+  comment: string;
+  color: ColorKey;
+  tags: string[];
+  source?: SourceAnchor;
+  collapsed?: boolean;
+  review?: ReviewState;
+  /**
+   * Free placement in the mind map. For a root card this is its absolute position;
+   * for a child it is relative to its parent's top-left corner. Absent = automatic layout.
+   */
+  mapPos?: { x: number; y: number };
+  /** The group (see `Notebook.groups`) this card belongs to. */
+  groupId?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type CardMap = Record<string, Card>;
+
+/** A named, coloured set of cards, drawn as a frame around them in the mind map and on the whiteboard. */
+export interface CardGroup {
+  id: string;
+  name: string;
+  color: ColorKey;
+}
+
+// ---------------------------------------------------------------------------
+// Whiteboard: a free canvas holding placed cards plus drawings, shapes, text
+// and arrows. Coordinates are canvas units (1 = 1px at 100% zoom).
+// ---------------------------------------------------------------------------
+
+/** 'ink' follows the theme's text colour (dark on light, light on dark). */
+export type InkColor = ColorKey | 'ink';
+
+interface BoardItemBase {
+  id: string;
+}
+
+/** A notebook card placed on the board (the card itself lives in `cards`). */
+export interface BoardCardItem extends BoardItemBase {
+  type: 'card';
+  cardId: string;
+  x: number;
+  y: number;
+  w: number;
+}
+
+/** Freehand pen / highlighter stroke; points are relative to (x, y). */
+export interface BoardStroke extends BoardItemBase {
+  type: 'stroke';
+  x: number;
+  y: number;
+  points: number[];
+  color: InkColor;
+  size: number;
+  highlighter?: boolean;
+}
+
+export interface BoardShape extends BoardItemBase {
+  type: 'shape';
+  shape: 'rect' | 'ellipse';
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  color: InkColor;
+  size: number;
+  fill: boolean;
+}
+
+export interface BoardText extends BoardItemBase {
+  type: 'text';
+  x: number;
+  y: number;
+  w: number;
+  text: string;
+  color: InkColor;
+  fontSize: number;
+}
+
+/** An arrow end is either a free point or attached to another item (it then follows that item). */
+export interface ArrowEnd {
+  x: number;
+  y: number;
+  itemId?: string;
+}
+
+export interface BoardArrow extends BoardItemBase {
+  type: 'arrow';
+  from: ArrowEnd;
+  to: ArrowEnd;
+  color: InkColor;
+  size: number;
+}
+
+export type BoardItem = BoardCardItem | BoardStroke | BoardShape | BoardText | BoardArrow;
+
+export interface Board {
+  /** Back-to-front drawing order. */
+  items: BoardItem[];
+}
+
+export const EMPTY_BOARD: Board = { items: [] };
+
+export interface Notebook {
+  version: 1;
+  id: string;
+  title: string;
+  docIds: string[];
+  cards: CardMap;
+  board?: Board;
+  groups?: CardGroup[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface DocMeta {
+  id: string;
+  title: string;
+  fileName: string;
+  pageCount: number;
+  size: number;
+  hash: string;
+  thumbId?: string;
+  addedAt: number;
+}
+
+export interface NotebookMeta {
+  id: string;
+  title: string;
+  docIds: string[];
+  cardCount: number;
+  /** Due timestamps of cards in review, so the library can show due counts without loading notebooks. */
+  reviewDues: number[];
+  createdAt: number;
+  updatedAt: number;
+  openedAt: number;
+}
+
+export interface LibraryData {
+  version: 1;
+  docs: DocMeta[];
+  notebooks: NotebookMeta[];
+}
