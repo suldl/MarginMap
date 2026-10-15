@@ -19,7 +19,7 @@ import {
   openGroupMenu,
   renameGroup,
 } from '../cardActions';
-import { CardPreview } from '../CardPreview';
+import { CardPreview, canEnlarge } from '../CardPreview';
 import { Icon } from '../Icon';
 import { CardNode } from './CardNode';
 import { edgePath, layoutTree, V_GAP, type NodeBox } from './layout';
@@ -130,7 +130,7 @@ export function MindMap() {
   const [matchIdx, setMatchIdx] = useState(0);
   const [filter, setFilter] = useState<Filter>(NO_FILTER);
   const [filterOpen, setFilterOpen] = useState(false);
-  /** Card shown enlarged (after a click). */
+  /** Picture card shown enlarged (after a double-click). */
   const [preview, setPreview] = useState<string | null>(null);
   const [vpSize, setVpSize] = useState({ w: 0, h: 0 });
 
@@ -456,11 +456,10 @@ export function MindMap() {
           store.toggleSelected(primary);
           return;
         }
-        // Plain click: select, follow the excerpt in the document, and show the card enlarged.
+        // Plain click: select and follow the excerpt in the document.
         store.select(primary);
         const card = all[primary];
         if (card?.source && useStudy.getState().layout !== 'map') locateCard(card, { silent: true });
-        if (useStudy.getState().enlarge) setPreview(primary);
         return;
       }
       const t = d.target;
@@ -497,6 +496,19 @@ export function MindMap() {
   const cardDownRef = useRef(onCardPointerDown);
   cardDownRef.current = onCardPointerDown;
   const stableCardDown = useCallback((e: React.PointerEvent, id: string) => cardDownRef.current(e, id), []);
+
+  /** Double-click: a picture card opens enlarged, any other card is renamed. */
+  const onCardDoubleClick = useCallback((id: string) => {
+    const store = useNotebook.getState();
+    const card = store.nb!.cards[id];
+    if (!card) return;
+    if (useStudy.getState().enlarge && canEnlarge(card)) {
+      store.select(id);
+      setPreview(id);
+    } else {
+      store.setEditing(id);
+    }
+  }, []);
 
   const onGroupPointerDown = (e: React.PointerEvent, groupId: string) => {
     if (e.button !== 0) return;
@@ -622,6 +634,7 @@ export function MindMap() {
       const ids = multi ? store.selectedIds : [id];
       const card = cards[id];
       const extra: MenuItem[] = [];
+      if (!multi && canEnlarge(card)) extra.push({ label: 'Enlarge', shortcut: 'Double-click', onClick: () => setPreview(id) });
       if (ids.some((x) => cards[x]?.mapPos)) extra.push({ label: 'Return to automatic layout', onClick: () => tidyUp(ids) });
       if (!multi && card.parentId)
         extra.push({ label: 'Detach as independent card', onClick: () => placeFreely([id], 0, 0, true) });
@@ -787,6 +800,7 @@ export function MindMap() {
               }
               flashNonce={flash?.cardId === n.id ? flash.nonce : 0}
               onPointerDown={stableCardDown}
+              onDoubleClick={onCardDoubleClick}
               onReport={onReport}
             />
           );
@@ -983,7 +997,7 @@ export function MindMap() {
         )}
         <button
           className={`btn icon ${enlarge ? 'on' : ''}`}
-          title={`Enlarge cards on click: ${enlarge ? 'on' : 'off'}`}
+          title={`Enlarge picture cards on double-click: ${enlarge ? 'on' : 'off'}`}
           onClick={() => {
             useStudy.getState().set({ enlarge: !enlarge });
             if (enlarge) setPreview(null);

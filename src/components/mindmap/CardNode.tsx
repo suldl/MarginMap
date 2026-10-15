@@ -17,6 +17,7 @@ interface Props {
   searchState: 'match' | 'dim' | null;
   flashNonce: number;
   onPointerDown(e: React.PointerEvent, id: string): void;
+  onDoubleClick(id: string): void;
   onReport(id: string, w: number, h: number): void;
 }
 
@@ -63,7 +64,7 @@ export const CardNode = memo(function CardNode(p: Props) {
       onPointerDown={(e) => p.onPointerDown(e, card.id)}
       onDoubleClick={(e) => {
         e.stopPropagation();
-        useNotebook.getState().setEditing(card.id);
+        p.onDoubleClick(card.id);
       }}
     >
       <CardBody card={card} editing={p.editing} />

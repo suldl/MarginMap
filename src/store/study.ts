@@ -22,7 +22,7 @@ interface Prefs {
   swapped: boolean;
   color: ColorKey;
   inspector: boolean;
-  /** Show an enlarged view of a card when it is clicked. */
+  /** Show an enlarged view of a picture card when it is double-clicked. */
   enlarge: boolean;
 }
 

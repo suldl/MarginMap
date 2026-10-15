@@ -186,8 +186,11 @@ function MapsPage() {
           ]}
         />
       </Row>
-      <Row title="Enlarge cards on click" hint="Show the full card (text, image, notes) when you click it.">
-        <Switch on={enlarge} label="Enlarge cards on click" onChange={(v) => useStudy.getState().set({ enlarge: v })} />
+      <Row
+        title="Enlarge picture cards on double-click"
+        hint="Double-click a picture excerpt to see it big, with its notes. Double-clicking a text card (or any card while this is off) edits its title."
+      >
+        <Switch on={enlarge} label="Enlarge picture cards on double-click" onChange={(v) => useStudy.getState().set({ enlarge: v })} />
       </Row>
       <div className="set-note">
         <Icon name="info" size={15} />
@@ -424,7 +427,8 @@ const SHORTCUTS: [string, [string, string][]][] = [
     'Mind map',
     [
       ['Tab / Enter', 'Add child / sibling card'],
-      ['F2 or double-click', 'Rename'],
+      ['F2 or double-click a text card', 'Rename'],
+      ['Double-click a picture card', 'Enlarge'],
       ['Drag on empty space', 'Select several cards'],
       ['Ctrl+click / Shift+click', 'Add to selection'],
       ['Ctrl+A', 'Select all'],

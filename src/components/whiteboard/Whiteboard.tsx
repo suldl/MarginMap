@@ -7,7 +7,7 @@ import { gridSpacing, useSettings } from '../../store/settings';
 import { useUi } from '../../store/ui';
 import { COLORS, type ArrowEnd, type BoardCardItem, type BoardItem, type BoardText, type InkColor } from '../../types';
 import { deleteWithUndoHint, groupSelection, locateCard, openGroupMenu, renameGroup } from '../cardActions';
-import { CardPreview } from '../CardPreview';
+import { CardPreview, canEnlarge } from '../CardPreview';
 import { Icon, type IconName } from '../Icon';
 import { useLatexAssist } from '../LatexAssist';
 import { ArrowView, BoardCard, BoardTextView, ShapeView, StrokeView } from './BoardItems';
@@ -525,7 +525,6 @@ export function Whiteboard() {
         if (it?.type === 'card' && !cur.shift) {
           const card = cards[it.cardId];
           if (card?.source && studyLayout !== 'map') locateCard(card, { silent: true });
-          if (enlarge && card) setPreview({ cardId: card.id, itemId: it.id });
         }
         return;
       }
@@ -597,7 +596,10 @@ export function Whiteboard() {
     if (hit?.type === 'text') {
       setDraft({ ...hit, isNew: false });
     } else if (hit?.type === 'card') {
-      store.setEditing(hit.cardId);
+      // A picture card opens enlarged, any other card is renamed.
+      const card = cards[hit.cardId];
+      if (enlarge && card && canEnlarge(card)) setPreview({ cardId: card.id, itemId: hit.id });
+      else store.setEditing(hit.cardId);
     } else if (!hit) {
       const id = store.addCard({}, { parentId: null }, { boardAt: { x: p.x - DEFAULT_CARD_W / 2, y: p.y - 20 } });
       store.setEditing(id);
@@ -763,10 +765,13 @@ export function Whiteboard() {
     if (hit.type === 'card' && cards[hit.cardId]) {
       const card = cards[hit.cardId];
       const group = card.groupId ? groups.find((g) => g.id === card.groupId) : undefined;
+      const picture = canEnlarge(card);
       ui.openMenu(e.clientX, e.clientY, [
         ...(selCardIds.length > 1 ? [{ header: `${ids.length} items selected` }] : []),
-        { label: 'Edit title', shortcut: 'Double-click', onClick: () => store.setEditing(card.id) },
-        { label: 'Enlarge', onClick: () => setPreview({ cardId: card.id, itemId: hit.id }) },
+        { label: 'Edit title', shortcut: picture && enlarge ? undefined : 'Double-click', onClick: () => store.setEditing(card.id) },
+        ...(picture
+          ? [{ label: 'Enlarge', shortcut: enlarge ? 'Double-click' : undefined, onClick: () => setPreview({ cardId: card.id, itemId: hit.id }) }]
+          : []),
         { label: 'Locate in document', disabled: !card.source, onClick: () => locateCard(card) },
         {
           label: 'Show in mind map',
@@ -1070,7 +1075,7 @@ export function Whiteboard() {
         </button>
         <button
           className={`btn icon ${enlarge ? 'on' : ''}`}
-          title={`Enlarge cards on click: ${enlarge ? 'on' : 'off'}`}
+          title={`Enlarge picture cards on double-click: ${enlarge ? 'on' : 'off'}`}
           onClick={() => useStudy.getState().set({ enlarge: !enlarge })}
         >
           <Icon name="enlarge" />

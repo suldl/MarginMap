@@ -17,6 +17,9 @@ export interface PreviewAnchor {
 
 const MARGIN = 12;
 
+/** Only picture (area) excerpts open enlarged; text cards are already readable on the map. */
+export const canEnlarge = (card: Card) => !!card.imageId;
+
 /**
  * Enlarged, full-content view of a card, shown over the map where the card is.
  * It is not scaled with the canvas, so it stays readable at any zoom level.

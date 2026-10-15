@@ -13,7 +13,7 @@ A MarginNote-style study app for Windows. It covers the core MarginNote workflow
 | **Library** | Import PDFs (button, drag & drop, or *Open with…* from Explorer), cover thumbnails, duplicate detection, notebooks that can hold several documents |
 | **Reader** | Fast lazy-rendered pages (pdf.js), crisp at any zoom, fit-width mode, Ctrl+wheel zoom, table of contents, full-text search, bundled CJK character maps |
 | **Excerpts** | Select text → choose a color → it becomes a highlighted card. **Area excerpts** capture figures, formulas and tables as images (and remember the text under them for search) |
-| **Mind map** | Horizontal tree with pan/zoom, drag & drop to reparent or reorder, collapse/expand, find (Ctrl+F), right-click menu, keyboard editing. Click a card to see it **enlarged** (full text, big image, notes) |
+| **Mind map** | Horizontal tree with pan/zoom, drag & drop to reparent or reorder, collapse/expand, find (Ctrl+F), right-click menu, keyboard editing. Double-click a picture card to see it **enlarged** (big image, full text, notes) |
 | **Free placement** | Drag a card into empty space and it stays there, still connected to its parent (Alt = detach as an independent card). Double-click anywhere to put a new card on that spot. *Tidy up* returns everything to the automatic layout |
 | **Selection & groups** | Drag a selection box over cards, Ctrl/Shift+click to add, Ctrl+A for all. Move, recolor, tag, review or delete them together. **Ctrl+G** groups them into a named, colored frame (also shown on the whiteboard) |
 | **Classify & filter** | Filter the map by color, tag, group or status (in review, due, has notes, image, placed freely) and select every match; tag several cards at once |
