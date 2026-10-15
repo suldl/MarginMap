@@ -14,7 +14,6 @@ import {
   groupMemberIds,
   groupSelection,
   locateCard,
-  makeAnswers,
   navigate,
   openCardMenu,
   openGroupMenu,
@@ -25,8 +24,7 @@ import { Icon } from '../Icon';
 import { CardNode } from './CardNode';
 import { edgePath, layoutTree, V_GAP, type NodeBox } from './layout';
 
-/** 'answer': Alt held over a card — the dragged cards become its answers. */
-type DropZone = 'child' | 'before' | 'after' | 'answer';
+type DropZone = 'child' | 'before' | 'after';
 
 interface DragState {
   /** Top-level cards being moved; their subtrees follow. */
@@ -430,18 +428,11 @@ export function MindMap() {
       d.active = true;
       d.alt = ev.altKey;
       d.target = null;
-      // Group frames only move; cards can also be dropped onto other cards (with Alt: as answers).
-      if (!d.group) {
+      // Group frames only move; cards can also be dropped onto other cards.
+      if (!d.group && !ev.altKey) {
         const { x: mx, y: my } = toCanvas(ev.clientX, ev.clientY);
         for (const n of layoutRef.current.nodes.values()) {
           if (excluded.has(n.id)) continue;
-          if (ev.altKey) {
-            if (mx >= n.x && mx <= n.x + n.w && my >= n.y && my <= n.y + n.h) {
-              d.target = { id: n.id, zone: 'answer' };
-              break;
-            }
-            continue;
-          }
           if (mx >= n.x && mx <= n.x + n.w && my >= n.y - V_GAP / 2 && my <= n.y + n.h + V_GAP / 2) {
             const fy = (my - n.y) / n.h;
             d.target = { id: n.id, zone: fy < 0.25 ? 'before' : fy > 0.75 ? 'after' : 'child' };
@@ -475,10 +466,6 @@ export function MindMap() {
       }
       const t = d.target;
       const k = viewRef.current.k;
-      if (t?.zone === 'answer') {
-        makeAnswers(d.ids, t.id);
-        return;
-      }
       if (!t) {
         placeFreely(d.ids, d.dx / k, d.dy / k, d.alt);
       } else if (t.zone === 'child') {
@@ -810,7 +797,6 @@ export function MindMap() {
               editing={editingId === n.id}
               dragging={isMoving}
               dropChild={dropTarget?.id === n.id && dropTarget.zone === 'child'}
-              dropAnswer={dropTarget?.id === n.id && dropTarget.zone === 'answer'}
               searchState={
                 search?.trim() ? (matchSet.has(n.id) ? 'match' : 'dim') : fActive ? (filterSet.has(n.id) ? null : 'dim') : null
               }
@@ -822,7 +808,7 @@ export function MindMap() {
           );
         })}
 
-        {dropBox && dropTarget && (dropTarget.zone === 'before' || dropTarget.zone === 'after') && (
+        {dropBox && dropTarget && dropTarget.zone !== 'child' && (
           <div
             className="drop-line"
             style={{
@@ -982,7 +968,7 @@ export function MindMap() {
       <div className="map-hint" style={vpSize.w && vpSize.w < 1000 ? { display: 'none' } : undefined}>
         {docShown && <span>Click a card's page tag or press Space to find its excerpt</span>}
         <span>
-          {mapDrag === 'select' ? 'Drag empty space to select · right-drag to pan' : 'Drag to pan · Shift+drag to select'} · drag cards anywhere (Alt+drop on a card: make it an answer)
+          {mapDrag === 'select' ? 'Drag empty space to select · right-drag to pan' : 'Drag to pan · Shift+drag to select'} · drag cards anywhere
         </span>
       </div>
 

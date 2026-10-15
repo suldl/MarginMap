@@ -434,7 +434,6 @@ const SHORTCUTS: [string, [string, string][]][] = [
       ['Ctrl+A', 'Select all'],
       ['Ctrl+G / Ctrl+Shift+G', 'Group / ungroup selected cards'],
       ['Drag a card to empty space', 'Place it freely (Alt: detach)'],
-      ['Alt+drag a card onto another', 'Make it an answer card of that card'],
       ['Right or middle drag', 'Pan'],
       ['Del', 'Delete selected cards'],
       ['Space', 'Locate in document (or click the card’s page tag)'],

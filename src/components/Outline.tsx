@@ -5,13 +5,12 @@ import { useStudy } from '../store/study';
 import type { Card } from '../types';
 import { AnswerBadge } from './Answers';
 import { SourceBadge } from './CardBody';
-import { addChild, addSibling, deleteWithUndoHint, groupSelection, locateCard, makeAnswers, openCardMenu } from './cardActions';
+import { addChild, addSibling, deleteWithUndoHint, groupSelection, locateCard, openCardMenu } from './cardActions';
 import { Icon } from './Icon';
 import { useLatexAssist } from './LatexAssist';
 import { MathText } from './MathText';
 
-/** 'answer': Alt held — the dragged card becomes the row's answer. */
-type Zone = 'before' | 'after' | 'child' | 'answer';
+type Zone = 'before' | 'after' | 'child';
 
 export function Outline() {
   const cards = useNotebook((s) => s.nb!.cards);
@@ -130,9 +129,7 @@ export function Outline() {
     dragId.current = null;
     if (!id || !t || id === t.id) return;
     const nb = useNotebook.getState();
-    if (t.zone === 'answer') {
-      makeAnswers([id], t.id);
-    } else if (t.zone === 'child') {
+    if (t.zone === 'child') {
       nb.moveCard(id, t.id, childrenOf(tree, t.id).length);
     } else {
       const target = cards[t.id];
@@ -200,7 +197,7 @@ export function Outline() {
               e.preventDefault();
               const r = e.currentTarget.getBoundingClientRect();
               const fy = (e.clientY - r.top) / r.height;
-              const zone: Zone = e.altKey ? 'answer' : fy < 0.28 ? 'before' : fy > 0.72 ? 'after' : 'child';
+              const zone: Zone = fy < 0.28 ? 'before' : fy > 0.72 ? 'after' : 'child';
               if (drop?.id !== card.id || drop.zone !== zone) setDrop({ id: card.id, zone });
             }}
             onDragLeave={(e) => {

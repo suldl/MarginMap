@@ -23,7 +23,7 @@ A MarginNote-style study app for Windows. It covers the core MarginNote workflow
 | **Whiteboard** | A free canvas per notebook: drag cards anywhere, draw with pen and highlighter, add rectangles, ellipses, text and arrows that stay connected to cards as you move them. **E** toggles pen ⇄ eraser; works with pen tablets (the eraser end of a pen erases too). The **area excerpt** tool (`C`) turns a box of the board — sketches, text, cards — into a new picture card (desktop app) |
 | **Two-way links** | Clicking a card only selects it; click its page tag (*p.3*), press `Space` or choose *Locate in document* → the document jumps to the excerpt and flashes it. Click a highlight in the PDF → its card is selected in the map |
 | **Outline** | The same cards as an indented outline (the outline button next to the pane switches), with drag & drop and Tab / Shift+Tab indent/outdent |
-| **Answer cards** | Give a card any number of answer cards — typed (with formulas), excerpted text (select the card, select text, choose *Answer*) or pictures (area tool + `Alt`). Existing text, picture and area cards become answers when you hold `Alt` and drag them onto another card (mind map, outline or whiteboard). They stay off the map: the card's **Answer** button opens a window with the card and its answers. They are also on the back of the card's flashcard and in exports |
+| **Answer cards** | Give a card any number of answer cards — typed (with formulas), excerpted text (select the card, select text, choose *Answer*) or pictures (area tool + `Alt`). They stay off the map: the card's **Answer** button opens a window with the card and its answers. They are also on the back of the card's flashcard and in exports |
 | **Card panel** | Title, color, editable excerpt, notes, answers, tags, source link, review toggle |
 | **Review** | Spaced repetition (SM-2, Anki-like): Again / Hard / Good / Easy, per notebook or across all notebooks |
 | **Export** | Markdown, OPML (importable by mind-map apps such as XMind and MindNode), JSON backup |
@@ -82,7 +82,7 @@ Other scripts:
 
 | Where | Keys |
 | --- | --- |
-| Mind map | `Tab` add child · `Enter` add sibling · `F2` / double-click rename · `Del` delete selected · arrows navigate · `Space` locate in document · `Ctrl+F` find · `Ctrl+A` select all · `Ctrl+G` / `Ctrl+Shift+G` group / ungroup · drag empty space to select · right- or middle-drag to pan · double-click empty space for a new card there · `Alt`+drag a card onto another: make it an answer · `Esc` deselect |
+| Mind map | `Tab` add child · `Enter` add sibling · `F2` / double-click rename · `Del` delete selected · arrows navigate · `Space` locate in document · `Ctrl+F` find · `Ctrl+A` select all · `Ctrl+G` / `Ctrl+Shift+G` group / ungroup · drag empty space to select · right- or middle-drag to pan · double-click empty space for a new card there · `Esc` deselect |
 | Whiteboard | `V` select · `H` pan (or hold `Space`) · `P` pen · `M` highlighter · `E` eraser (press again: back to the pen) · `R` rectangle · `O` ellipse · `A` arrow · `T` text · `C` area excerpt · `Ctrl+G` group cards · `Del` remove · arrows nudge · double-click empty space for a new card |
 | Formulas | `\` + letters: command suggestions · `↑`/`↓` choose · `Enter`/`Tab` insert · `Tab` next `{}` slot |
 | Anywhere | `Ctrl+,` settings |

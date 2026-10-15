@@ -1,4 +1,4 @@
-import { buildTree, cardLabel, childrenOf } from '../lib/tree';
+import { buildTree, childrenOf } from '../lib/tree';
 import { uid } from '../lib/util';
 import { useLibrary } from '../store/library';
 import { groupsOf, useNotebook } from '../store/notebook';
@@ -77,23 +77,6 @@ export function removeAnswer(cardId: string, answerId: string) {
   if (!card?.answers) return;
   const answers = card.answers.filter((a) => a.id !== answerId);
   nb.updateCard(cardId, { answers: answers.length ? answers : undefined });
-}
-
-/** Alt+drop onto a card: the dragged cards become its answer cards (one undo step). */
-export function makeAnswers(ids: string[], targetId: string) {
-  const store = useNotebook.getState();
-  const target = store.nb?.cards[targetId];
-  if (!target) return;
-  const n = store.convertToAnswers(ids, targetId);
-  const ui = useUi.getState();
-  if (!n) {
-    ui.toast('Empty cards can’t become answers');
-    return;
-  }
-  ui.toast(`${n === 1 ? 'Card' : `${n} cards`} turned into answer${n === 1 ? '' : 's'} of “${cardLabel(target, 40)}” · Ctrl+Z to undo`, 'info', {
-    label: 'Show',
-    run: () => useUi.getState().openAnswers(targetId),
-  });
 }
 
 /** Menu entry that opens a card's answers (or starts its first one). */
