@@ -898,6 +898,25 @@ select {
 .reader-scroll.area-mode .textLayer {
   pointer-events: none;
 }
+/* Pointer tool: a plain arrow; highlights are clickable, dragging moves the page. */
+.reader-scroll.pointer-mode .reader-pages {
+  cursor: default;
+  user-select: none;
+}
+.reader-scroll.pointer-mode .textLayer {
+  pointer-events: none;
+}
+.reader-scroll.pointer-mode .hl {
+  pointer-events: auto;
+  cursor: pointer;
+}
+.reader-scroll.pointer-mode .hl:hover {
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--cc) 80%, black);
+}
+.reader-scroll.grabbing,
+.reader-scroll.grabbing * {
+  cursor: grabbing !important;
+}
 
 /* ------------------------------------------------------------------ */
 /* Mind map                                                           */

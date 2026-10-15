@@ -74,6 +74,8 @@ function DocReader({ notebookId, docId }: { notebookId: string; docId: string })
   const [hlBar, setHlBar] = useState<{ cardId: string; x: number; y: number } | null>(null);
   const [query, setQuery] = useState('');
   const [pageInput, setPageInput] = useState('1');
+  /** The pointer tool is dragging the page. */
+  const [grabbing, setGrabbing] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const pagesRef = useRef<HTMLDivElement>(null);
@@ -303,15 +305,45 @@ function DocReader({ notebookId, docId }: { notebookId: string; docId: string })
     setHlBar(null);
   };
 
+  // ---- pointer tool: drag the page around --------------------------------------
+  /** Set when the last pointer press dragged the page, so its release is not a click. */
+  const dragged = useRef(false);
+  const onPointerDown = (e: React.PointerEvent) => {
+    dragged.current = false;
+    const el = scrollRef.current;
+    if (tool !== 'pointer' || e.button !== 0 || !el || (e.target as Element).closest('.float-toolbar')) return;
+    const start = { x: e.clientX, y: e.clientY, left: el.scrollLeft, top: el.scrollTop };
+    const move = (ev: PointerEvent) => {
+      const dx = ev.clientX - start.x;
+      const dy = ev.clientY - start.y;
+      if (!dragged.current && Math.hypot(dx, dy) < 4) return;
+      if (!dragged.current) {
+        dragged.current = true;
+        setGrabbing(true);
+      }
+      el.scrollLeft = start.left - dx;
+      el.scrollTop = start.top - dy;
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      setGrabbing(false);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  };
+
   const onMouseUp = (e: React.MouseEvent) => {
-    if (tool !== 'text' || e.button !== 0) return;
+    if (tool === 'area' || e.button !== 0 || dragged.current) return;
     const target = e.target as Element;
     if (target.closest('.float-toolbar')) return;
     const { clientX, clientY } = e;
     setTimeout(() => {
       const pagesEl = pagesRef.current;
       if (!pagesEl) return;
-      const info = readSelection(pagesEl);
+      const info = tool === 'text' ? readSelection(pagesEl) : null;
       if (info) {
         setSelBar(info);
         return;
@@ -442,6 +474,13 @@ function DocReader({ notebookId, docId }: { notebookId: string; docId: string })
         </button>
         <div className="divider-v" />
         <div className="seg">
+          <button
+            className={`btn icon ${tool === 'pointer' ? 'on' : ''}`}
+            title="Pointer — click highlights to select their cards, drag to move the page"
+            onClick={() => setStudy({ tool: 'pointer' })}
+          >
+            <Icon name="cursor" />
+          </button>
           <button className={`btn icon ${tool === 'text' ? 'on' : ''}`} title="Select text to excerpt" onClick={() => setStudy({ tool: 'text' })}>
             <Icon name="text" />
           </button>
@@ -496,9 +535,10 @@ function DocReader({ notebookId, docId }: { notebookId: string; docId: string })
         {pdf && <ReaderSidebar pdf={pdf} query={query} setQuery={setQuery} onGo={(p) => goToPage(p)} />}
         <div
           ref={scrollRef}
-          className={`reader-scroll ${tool === 'area' ? 'area-mode' : ''}`}
+          className={`reader-scroll ${tool === 'area' ? 'area-mode' : tool === 'pointer' ? 'pointer-mode' : ''} ${grabbing ? 'grabbing' : ''}`}
           tabIndex={0}
           onScroll={onScroll}
+          onPointerDown={onPointerDown}
           onMouseDown={onMouseDown}
           onMouseUp={onMouseUp}
         >

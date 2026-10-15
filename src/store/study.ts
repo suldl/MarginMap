@@ -3,7 +3,8 @@ import type { ColorKey } from '../types';
 
 export type StudyLayout = 'split' | 'doc' | 'map';
 export type MapMode = 'mindmap' | 'outline' | 'whiteboard';
-export type ReaderTool = 'text' | 'area';
+/** 'pointer' only clicks highlights and drags the page; 'text' selects text to excerpt; 'area' captures a box. */
+export type ReaderTool = 'pointer' | 'text' | 'area';
 export type ReaderSidebar = 'none' | 'toc' | 'search' | 'cards';
 
 export interface JumpRequest {

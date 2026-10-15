@@ -11,7 +11,7 @@ A MarginNote-style study app for Windows. It covers the core MarginNote workflow
 | Area | What you get |
 | --- | --- |
 | **Library** | Import PDFs (button, drag & drop, or *Open with…* from Explorer), cover thumbnails, duplicate detection, notebooks that can hold several documents |
-| **Reader** | Fast lazy-rendered pages (pdf.js), crisp at any zoom, fit-width mode, Ctrl+wheel zoom, table of contents, full-text search, bundled CJK character maps |
+| **Reader** | Fast lazy-rendered pages (pdf.js), crisp at any zoom, fit-width mode, Ctrl+wheel zoom, table of contents, full-text search, bundled CJK character maps. A **pointer** tool clicks highlights and drags the page without selecting text |
 | **Excerpts** | Select text → choose a color → it becomes a highlighted card. **Area excerpts** capture figures, formulas and tables as images (and remember the text under them for search) |
 | **Mind map** | Horizontal tree with pan/zoom, drag & drop to reparent or reorder, collapse/expand, find (Ctrl+F), right-click menu, keyboard editing. Double-click a picture card to see it **enlarged** (big image, full text, notes) |
 | **Free placement** | Drag a card into empty space and it stays there, still connected to its parent (Alt = detach as an independent card). Double-click anywhere to put a new card on that spot. *Tidy up* returns everything to the automatic layout |
@@ -62,6 +62,7 @@ Other scripts:
 1. **Import** a PDF and click it — a notebook is created for it.
 2. **Select text** in the document; in the popup pick a color to excerpt it as a card.
    Use the **area tool** (dashed-square icon) and drag a box to capture a figure.
+   The **pointer** (arrow icon) only selects: click a highlight to pick its card, drag to move the page.
 3. **Select a card first** and new excerpts are added as its children — a quick way to build a hierarchy while reading.
 4. **Organize** in the mind map: drag cards onto each other (middle = child, top/bottom edge = sibling), into empty space to place them freely, or use the keyboard.
    Drag across empty space to select several cards, then **Ctrl+G** to group them; the funnel button filters by color, tag, group or status.
