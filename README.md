@@ -119,46 +119,6 @@ Releases are built and uploaded by GitHub Actions ([`.github/workflows/release.y
    and `marginmap` with the repository name if it differs. Commit and push.
    *(That setting is also what installed copies use to look for updates.)*
 
-**Each release**
-
-1. Set the new `version` in `package.json` (e.g. `0.5.1`), add the changes to `UpdateLog.md`, commit.
-2. Tag and push — the tag must be `v` + the version:
-   ```bash
-   git tag v0.5.1
-   git push origin main --tags
-   ```
-3. The workflow type-checks, runs the end-to-end tests on Windows, builds, and uploads to a **draft** release:
-   `MarginMap-Setup-0.5.1.exe` (installer), its `.blockmap`, `latest.yml` (read by the updater) and
-   `MarginMap-0.5.1-portable.exe`.
-4. On GitHub → Releases, open the draft, write the notes (they are shown in the app), and **Publish**.
-   Installed copies see the update from that moment on.
-
-electron-builder only builds the files (`--publish never`); the workflow uploads all four in one step with
-the GitHub CLI. Letting electron-builder upload can split the files across several drafts with the same tag.
-If a run fails half-way, delete its draft on GitHub, then use *Re-run all jobs* on the Actions page.
-
-The builds are not code-signed, so Windows SmartScreen asks for confirmation on the first install.
-Updates install without that prompt.
-
-## In-app updates
-
-*Settings → Updates* checks the latest **published** GitHub release (also automatically once a day at startup,
-which can be switched off).
-
-- **Installed copy** (`MarginMap-Setup-….exe`): *Download update* fetches the new installer in the background
-  (only the changed parts when possible, thanks to the `.blockmap`), then *Restart and install* closes MarginMap,
-  installs silently and starts the new version. Quitting the app after downloading installs it as well.
-  Your library is never touched — it lives in `%APPDATA%\MarginMap`.
-- **Portable copy**: it can't replace itself, so it only reports the new version and opens the release page.
-
-Implementation: [`electron/autoUpdate.ts`](electron/autoUpdate.ts) (electron-updater, installed copies) and
-[`electron/updates.ts`](electron/updates.ts) (notify-only check). The updater writes a log to
-`%APPDATA%\MarginMap\logs\updater.log`.
-
-For testing, two environment variables override the source:
-`MARGINMAP_UPDATE_GENERIC=http://host/folder/` makes an installed copy update from a folder containing
-`latest.yml` and the installer, and `MARGINMAP_UPDATE_URL` (`owner/repo` or a JSON URL returning
-`{ "version", "url", "notes" }`) forces the notify-only check.
 
 ## Architecture
 
