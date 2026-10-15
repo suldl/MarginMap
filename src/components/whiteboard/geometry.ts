@@ -121,7 +121,7 @@ export function strokePath(points: number[]): string {
   return d + ` L${points[n * 2 - 2]},${points[n * 2 - 1]}`;
 }
 
-function distToSegment(p: Pt, a: Pt, b: Pt): number {
+export function distToSegment(p: Pt, a: Pt, b: Pt): number {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const l2 = dx * dx + dy * dy;

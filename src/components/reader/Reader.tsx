@@ -4,13 +4,14 @@ import { canvasToBlob, loadPdf, type PDFDocumentProxy } from '../../lib/pdf';
 import { cardLabel } from '../../lib/tree';
 import { clamp, debounce, uid } from '../../lib/util';
 import { useLibrary } from '../../store/library';
-import { useNotebook } from '../../store/notebook';
-import { loadReadingPos, saveReadingPos, useStudy } from '../../store/study';
+import { marksOf, useNotebook } from '../../store/notebook';
+import { loadReadingPos, MARK_TOOLS, saveReadingPos, useStudy, type DocInkStyle, type ReaderTool } from '../../store/study';
 import { useUi } from '../../store/ui';
-import { COLORS, type ColorKey, type PageRect } from '../../types';
-import { Icon } from '../Icon';
+import { COLORS, type ColorKey, type DocMark, type DocNote, type DocText, type PageRect } from '../../types';
+import { Icon, type IconName } from '../Icon';
 import { addAnswer } from '../cardActions';
 import { defaultSpot, isWhiteboardActive } from '../whiteboard/boardActions';
+import { DOC_INKS, DOC_SIZES, docInk, MarkTextEditor, moveMark, NotePopover, noteColor } from './DocMarks';
 import { PageView, type PageHighlight } from './PageView';
 import { ReaderSidebar } from './ReaderSidebar';
 import { hitTest, readSelection, textInArea, type SelectionInfo } from './selection';
@@ -33,6 +34,15 @@ interface PageSize {
  * mounted later (e.g. after switching layouts) does not replay an old jump.
  */
 const handledJump = { nonce: 0 };
+
+/** Tools that write on the page. */
+const WRITE_TOOLS: { tool: ReaderTool; icon: IconName; label: string }[] = [
+  { tool: 'pen', icon: 'pen', label: 'Pen — write or draw on the page' },
+  { tool: 'marker', icon: 'marker', label: 'Highlighter — mark freely over the page' },
+  { tool: 'eraser', icon: 'eraser', label: 'Eraser — erases ink, text and notes on the page' },
+  { tool: 'write', icon: 'textbox', label: 'Text — click on the page to type (Cover paints over the text under it)' },
+  { tool: 'note', icon: 'comment', label: 'Note — click on the page to pin a sticky note' },
+];
 
 /** Tells where a new answer went, with a button to see it. */
 function answerAdded(cardId: string) {
@@ -85,6 +95,12 @@ function DocReader({ notebookId, docId }: { notebookId: string; docId: string })
   const [pageInput, setPageInput] = useState('1');
   /** The pointer tool is dragging the page. */
   const [grabbing, setGrabbing] = useState(false);
+  /** The mark selected with the pointer tool, and where its toolbar goes. */
+  const [markBar, setMarkBar] = useState<{ id: string; x: number; y: number } | null>(null);
+  /** A mark being dragged with the pointer tool (offset in page fractions). */
+  const [markDrag, setMarkDrag] = useState<{ id: string; dx: number; dy: number } | null>(null);
+  /** A text box or sticky note open for writing. */
+  const [markEdit, setMarkEdit] = useState<{ mark: DocText | DocNote; isNew: boolean } | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const pagesRef = useRef<HTMLDivElement>(null);
@@ -98,6 +114,9 @@ function DocReader({ notebookId, docId }: { notebookId: string; docId: string })
   const setStudy = useStudy((s) => s.set);
   const cards = useNotebook((s) => s.nb?.cards);
   const selectedId = useNotebook((s) => s.selectedId);
+  const allMarks = useNotebook((s) => marksOf(s.nb));
+  const inkStyle = useStudy((s) => s.docInk);
+  const writing = MARK_TOOLS.includes(tool);
 
   // ---- load document ------------------------------------------------------
   useEffect(() => {
@@ -297,6 +316,92 @@ function DocReader({ notebookId, docId }: { notebookId: string; docId: string })
     return m;
   }, [cards, docId]);
 
+  // ---- ink, text and notes on the pages ---------------------------------------
+  const marksByPage = useMemo(() => {
+    const m = new Map<number, DocMark[]>();
+    for (const mk of allMarks) {
+      if (mk.docId !== docId) continue;
+      let arr = m.get(mk.page);
+      if (!arr) m.set(mk.page, (arr = []));
+      arr.push(mk);
+    }
+    return m;
+  }, [allMarks, docId]);
+  const markById = (id: string) => allMarks.find((m) => m.id === id);
+  const selMark = markBar ? markById(markBar.id) : undefined;
+
+  // The selected mark went away (undo, eraser) or the tool changed.
+  useEffect(() => {
+    if (markBar && (!selMark || tool !== 'pointer')) setMarkBar(null);
+  }, [markBar, selMark, tool]);
+
+  const setInk = (patch: Partial<DocInkStyle>) => setStudy({ docInk: { ...useStudy.getState().docInk, ...patch } });
+
+  /** Saves the open text box or note (empty ones are dropped). */
+  const markEditRef = useRef(markEdit);
+  markEditRef.current = markEdit;
+  const finishMarkEdit = useCallback(() => {
+    const cur = markEditRef.current;
+    if (!cur) return;
+    markEditRef.current = null;
+    setMarkEdit(null);
+    const store = useNotebook.getState();
+    const mark = { ...cur.mark, text: cur.mark.text.trim() };
+    if (!mark.text) {
+      if (!cur.isNew) store.marksRemove([mark.id]);
+    } else if (cur.isNew) {
+      store.marksAdd([mark]);
+    } else {
+      store.marksReplace([mark]);
+    }
+    scrollRef.current?.focus({ preventScroll: true });
+  }, []);
+
+  /** Text and note tools: a click on a page starts a text box or a note there (or finishes the open one). */
+  const sizesRef = useRef(sizes);
+  sizesRef.current = sizes;
+  const onPlaceMark = useCallback(
+    (pg: number, x: number, y: number) => {
+      if (markEditRef.current) {
+        finishMarkEdit();
+        return;
+      }
+      const { tool: t, docInk: st } = useStudy.getState();
+      if (t === 'note') {
+        setMarkEdit({ isNew: true, mark: { id: uid(), type: 'note', docId, page: pg, x, y, text: '', color: noteColor(st.color) } });
+        return;
+      }
+      const size = sizesRef.current?.[pg - 1];
+      const fontSize = DOC_SIZES.text[st.size];
+      setMarkEdit({
+        isNew: true,
+        mark: {
+          id: uid(),
+          type: 'text',
+          docId,
+          page: pg,
+          x,
+          // Put the first line's middle where the page was clicked.
+          y: Math.max(0, y - (fontSize * 0.7 * (size ? size.w / size.h : 0.77))),
+          w: clamp(0.98 - x, 0.12, 0.32),
+          text: '',
+          color: st.color,
+          fontSize,
+          cover: st.cover || undefined,
+        },
+      });
+    },
+    [docId, finishMarkEdit],
+  );
+
+  const onOpenNote = useCallback(
+    (id: string) => {
+      const m = useNotebook.getState().nb?.marks?.find((x) => x.id === id);
+      if (m?.type === 'note') setMarkEdit({ mark: m, isNew: false });
+    },
+    [],
+  );
+
   // ---- text selection → excerpt ---------------------------------------------
   useEffect(() => {
     const reset = () => pagesRef.current?.querySelectorAll('.textLayer.selecting').forEach((el) => el.classList.remove('selecting'));
@@ -312,6 +417,7 @@ function DocReader({ notebookId, docId }: { notebookId: string; docId: string })
     if ((e.target as Element).closest('.float-toolbar')) return;
     setSelBar(null);
     setHlBar(null);
+    if (!(e.target as Element).closest('[data-mark]')) setMarkBar(null);
   };
 
   // ---- pointer tool: drag the page around --------------------------------------
@@ -321,6 +427,39 @@ function DocReader({ notebookId, docId }: { notebookId: string; docId: string })
     dragged.current = false;
     const el = scrollRef.current;
     if (tool !== 'pointer' || e.button !== 0 || !el || (e.target as Element).closest('.float-toolbar')) return;
+    // A mark: select it, drag to move it; a click on a note opens it.
+    const markEl = (e.target as Element).closest<HTMLElement>('[data-mark]');
+    const mark = markEl && markById(markEl.dataset.mark!);
+    const pageEl = markEl?.closest<HTMLElement>('.pdf-page');
+    if (mark && pageEl && pagesRef.current) {
+      dragged.current = true; // not a click on the page or a highlight
+      const pr = pageEl.getBoundingClientRect();
+      const base = pagesRef.current.getBoundingClientRect();
+      const x0 = e.clientX;
+      const y0 = e.clientY;
+      let d: { dx: number; dy: number } | null = null;
+      setMarkBar({ id: mark.id, x: x0 - base.left, y: y0 - base.top + 18 });
+      const move = (ev: PointerEvent) => {
+        if (!d && Math.hypot(ev.clientX - x0, ev.clientY - y0) < 3) return;
+        d = { dx: (ev.clientX - x0) / pr.width, dy: (ev.clientY - y0) / pr.height };
+        setMarkDrag({ id: mark.id, ...d });
+      };
+      const up = (ev: PointerEvent) => {
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+        setMarkDrag(null);
+        if (d) {
+          useNotebook.getState().marksReplace([moveMark(mark, d.dx, d.dy)]);
+          setMarkBar({ id: mark.id, x: ev.clientX - base.left, y: ev.clientY - base.top + 18 });
+        } else if (mark.type === 'note') {
+          setMarkBar(null);
+          setMarkEdit({ mark, isNew: false });
+        }
+      };
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+      return;
+    }
     const start = { x: e.clientX, y: e.clientY, left: el.scrollLeft, top: el.scrollTop };
     const move = (ev: PointerEvent) => {
       const dx = ev.clientX - start.x;
@@ -345,7 +484,7 @@ function DocReader({ notebookId, docId }: { notebookId: string; docId: string })
   };
 
   const onMouseUp = (e: React.MouseEvent) => {
-    if (tool === 'area' || e.button !== 0 || dragged.current) return;
+    if ((tool !== 'pointer' && tool !== 'text') || e.button !== 0 || dragged.current) return;
     const target = e.target as Element;
     if (target.closest('.float-toolbar')) return;
     const { clientX, clientY } = e;
@@ -458,10 +597,16 @@ function DocReader({ notebookId, docId }: { notebookId: string; docId: string })
     } else if (mod && e.key.toLowerCase() === 'f') {
       e.preventDefault();
       setStudy({ sidebar: 'search' });
+    } else if ((e.key === 'Delete' || e.key === 'Backspace') && markBar && !(e.target as HTMLElement).closest('input, textarea')) {
+      e.preventDefault();
+      useNotebook.getState().marksRemove([markBar.id]);
+      setMarkBar(null);
     } else if (e.key === 'Escape') {
       setSelBar(null);
       setHlBar(null);
+      setMarkBar(null);
       if (tool === 'area') setStudy({ tool: 'text' });
+      else if (writing) setStudy({ tool: 'pointer' });
     }
   };
 
@@ -480,6 +625,8 @@ function DocReader({ notebookId, docId }: { notebookId: string; docId: string })
   const clampX = (x: number, width: number) => {
     const el = scrollRef.current;
     if (!el) return x;
+    // Toolbars wrap when the reader is narrower than they are.
+    width = Math.min(width, el.clientWidth - 16);
     const min = el.scrollLeft + width / 2 + 8;
     const max = el.scrollLeft + el.clientWidth - width / 2 - 8;
     return Math.max(min, Math.min(max, x));
@@ -519,17 +666,51 @@ function DocReader({ notebookId, docId }: { notebookId: string; docId: string })
             <Icon name="area" />
           </button>
         </div>
-        <div className="swatches" style={{ marginLeft: 8 }} title="Excerpt color">
-          {COLORS.map((c) => (
-            <button
-              key={c}
-              className={`swatch ${color === c ? 'on' : ''}`}
-              style={{ '--sw': `var(--c-${c})`, width: 14, height: 14 } as React.CSSProperties}
-              onClick={() => setStudy({ color: c })}
-              title={c}
-            />
+        <div className="seg" role="group" aria-label="Write on the page">
+          {WRITE_TOOLS.map((t) => (
+            <button key={t.tool} className={`btn icon ${tool === t.tool ? 'on' : ''}`} title={t.label} onClick={() => setStudy({ tool: t.tool })}>
+              <Icon name={t.icon} />
+            </button>
           ))}
         </div>
+        {!writing ? (
+          <div className="swatches" style={{ marginLeft: 8 }} title="Excerpt color">
+            {COLORS.map((c) => (
+              <button
+                key={c}
+                className={`swatch ${color === c ? 'on' : ''}`}
+                style={{ '--sw': `var(--c-${c})`, width: 14, height: 14 } as React.CSSProperties}
+                onClick={() => setStudy({ color: c })}
+                title={c}
+              />
+            ))}
+          </div>
+        ) : tool !== 'eraser' ? (
+          <>
+            <div className="swatches" style={{ marginLeft: 8 }} title="Ink color">
+              {(tool === 'note' ? COLORS : DOC_INKS).map((c) => (
+                <button
+                  key={c}
+                  className={`swatch ${(tool === 'note' ? noteColor(inkStyle.color) : inkStyle.color) === c ? 'on' : ''}`}
+                  style={{ '--sw': docInk(c), width: 14, height: 14 } as React.CSSProperties}
+                  onClick={() => setInk({ color: c })}
+                  title={c === 'ink' ? 'Black' : c}
+                />
+              ))}
+            </div>
+            {tool !== 'note' &&
+              ([0, 1, 2] as const).map((s) => (
+                <button key={s} className={`btn icon ${inkStyle.size === s ? 'on' : ''}`} title={['Thin', 'Medium', 'Bold'][s]} onClick={() => setInk({ size: s })}>
+                  <span className="wb-size-dot" style={{ width: 4 + s * 3, height: 4 + s * 3 }} />
+                </button>
+              ))}
+            {tool === 'write' && (
+              <button className={`btn ${inkStyle.cover ? 'on' : ''}`} title="New text paints over what is under it (to correct the document's text)" onClick={() => setInk({ cover: !inkStyle.cover })}>
+                Cover
+              </button>
+            )}
+          </>
+        ) : null}
         <div className="grow" />
         <div className="page-indicator">
           <input
@@ -566,10 +747,19 @@ function DocReader({ notebookId, docId }: { notebookId: string; docId: string })
         {pdf && <ReaderSidebar pdf={pdf} query={query} setQuery={setQuery} onGo={(p) => goToPage(p)} />}
         <div
           ref={scrollRef}
-          className={`reader-scroll ${tool === 'area' ? 'area-mode' : tool === 'pointer' ? 'pointer-mode' : ''} ${grabbing ? 'grabbing' : ''}`}
+          className={`reader-scroll ${tool === 'area' ? 'area-mode' : tool === 'pointer' ? 'pointer-mode' : writing ? 'write-mode' : ''} ${grabbing ? 'grabbing' : ''}`}
           tabIndex={0}
           onScroll={onScroll}
           onPointerDown={onPointerDown}
+          onDoubleClick={(e) => {
+            // Pointer: double-click a text box to edit it.
+            const el = (e.target as Element).closest<HTMLElement>('[data-mark]');
+            const m = el && markById(el.dataset.mark!);
+            if (tool === 'pointer' && m?.type === 'text') {
+              setMarkBar(null);
+              setMarkEdit({ mark: m, isNew: false });
+            }
+          }}
           onMouseDown={onMouseDown}
           onMouseUp={onMouseUp}
         >
@@ -602,8 +792,100 @@ function DocReader({ notebookId, docId }: { notebookId: string; docId: string })
                   searchQuery={sidebar === 'search' ? query : ''}
                   areaMode={tool === 'area'}
                   onArea={onArea}
-                />
+                  marks={marksByPage.get(i + 1)}
+                  docId={docId}
+                  tool={tool}
+                  markSelectedId={markBar && marksByPage.get(i + 1)?.some((m) => m.id === markBar.id) ? markBar.id : null}
+                  markDrag={markDrag && marksByPage.get(i + 1)?.some((m) => m.id === markDrag.id) ? markDrag : null}
+                  markHiddenId={markEdit?.mark.page === i + 1 && !markEdit.isNew && markEdit.mark.type === 'text' ? markEdit.mark.id : null}
+                  onOpenNote={onOpenNote}
+                  onPlaceMark={onPlaceMark}
+                >
+                  {markEdit?.mark.page === i + 1 &&
+                    (markEdit.mark.type === 'text' ? (
+                      <MarkTextEditor
+                        mark={markEdit.mark}
+                        pageWidth={s.w * scale}
+                        onChange={(text) => setMarkEdit((cur) => cur && { ...cur, mark: { ...cur.mark, text } })}
+                        onDone={finishMarkEdit}
+                      />
+                    ) : (
+                      <NotePopover
+                        note={markEdit.mark}
+                        pageWidth={s.w * scale}
+                        onChange={(patch) => setMarkEdit((cur) => cur && cur.mark.type === 'note' ? { ...cur, mark: { ...cur.mark, ...patch } } : cur)}
+                        onDone={finishMarkEdit}
+                        onDelete={() => {
+                          const cur = markEditRef.current;
+                          markEditRef.current = null;
+                          setMarkEdit(null);
+                          if (cur && !cur.isNew) useNotebook.getState().marksRemove([cur.mark.id]);
+                        }}
+                      />
+                    ))}
+                </PageView>
               ))}
+
+              {markBar && selMark && (
+                <div
+                  className="float-toolbar"
+                  style={{ left: clampX(markBar.x, 380), top: markBar.y }}
+                  onMouseDown={(e) => e.preventDefault()}
+                >
+                  <div className="swatches">
+                    {(selMark.type === 'note' ? COLORS : DOC_INKS).map((c) => (
+                      <button
+                        key={c}
+                        className={`swatch ${selMark.color === c ? 'on' : ''}`}
+                        style={{ '--sw': docInk(c) } as React.CSSProperties}
+                        title={c === 'ink' ? 'Black' : c}
+                        onClick={() => useNotebook.getState().marksReplace([{ ...selMark, color: c } as DocMark])}
+                      />
+                    ))}
+                  </div>
+                  <div className="divider-v" />
+                  {selMark.type === 'text' && (
+                    <>
+                      <button
+                        className="btn"
+                        onClick={() => {
+                          setMarkBar(null);
+                          setMarkEdit({ mark: selMark, isNew: false });
+                        }}
+                      >
+                        <Icon name="pencil" size={15} /> Edit
+                      </button>
+                      <button
+                        className={`btn ${selMark.cover ? 'on' : ''}`}
+                        title="Paint over what is under the text"
+                        onClick={() => useNotebook.getState().marksReplace([{ ...selMark, cover: !selMark.cover || undefined }])}
+                      >
+                        Cover
+                      </button>
+                    </>
+                  )}
+                  {selMark.type === 'note' && (
+                    <button
+                      className="btn"
+                      onClick={() => {
+                        setMarkBar(null);
+                        setMarkEdit({ mark: selMark, isNew: false });
+                      }}
+                    >
+                      <Icon name="comment" size={15} /> Open
+                    </button>
+                  )}
+                  <button
+                    className="btn danger"
+                    onClick={() => {
+                      useNotebook.getState().marksRemove([selMark.id]);
+                      setMarkBar(null);
+                    }}
+                  >
+                    <Icon name="trash" size={15} /> Delete
+                  </button>
+                </div>
+              )}
 
               {selBar && (
                 <div className="float-toolbar" style={{ left: clampX(selBar.anchor.x, 480), top: selBar.anchor.y }} onMouseDown={(e) => e.preventDefault()}>

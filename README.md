@@ -14,6 +14,7 @@ A MarginNote-style study app for Windows. It covers the core MarginNote workflow
 | **Side by side** | Document, mind map and whiteboard each have their own switch in the title bar — show any of them, or all three at once. Drag the splitters to size them, *Swap sides* reverses their order |
 | **Reader** | Fast lazy-rendered pages (pdf.js), crisp at any zoom, fit-width mode, Ctrl+wheel zoom, table of contents, full-text search, bundled CJK character maps. A **pointer** tool clicks highlights and drags the page without selecting text |
 | **Excerpts** | Select text → choose a color → it becomes a highlighted card. **Area excerpts** capture figures, formulas and tables as images (and remember the text under them for search) |
+| **Write on documents** | Pen, highlighter and eraser on the page, **text boxes** (with formulas; *Cover* paints over the text under them to correct it) and **sticky notes**. Select, move, recolor or delete them with the pointer; they follow the zoom, can be undone, are kept with the notebook and exported to Markdown |
 | **Mind map** | Horizontal tree with pan/zoom, drag & drop to reparent or reorder, collapse/expand, find (Ctrl+F), right-click menu, keyboard editing. Double-click a picture card to see it **enlarged** (big image, full text, notes) |
 | **Free placement** | Drag a card into empty space and it stays there, still connected to its parent (Alt = detach as an independent card). Double-click anywhere to put a new card on that spot. *Tidy up* returns everything to the automatic layout |
 | **Selection & groups** | Drag a selection box over cards, Ctrl/Shift+click to add, Ctrl+A for all. Move, recolor, tag, review or delete them together. **Ctrl+G** groups them into a named, colored frame (also shown on the whiteboard) |
@@ -65,6 +66,8 @@ Other scripts:
 2. **Select text** in the document; in the popup pick a color to excerpt it as a card.
    Use the **area tool** (dashed-square icon) and drag a box to capture a figure.
    The **pointer** (arrow icon) only selects: click a highlight to pick its card, drag to move the page.
+   The next group of tools writes on the document: pen, highlighter, eraser, text (click where to type) and sticky notes.
+   With the pointer, click what you wrote to recolor, move or delete it; double-click a text box to edit it, click a note to open it.
 3. **Select a card first** and new excerpts are added as its children — a quick way to build a hierarchy while reading.
 4. **Organize** in the mind map: drag cards onto each other (middle = child, top/bottom edge = sibling), into empty space to place them freely, or use the keyboard.
    Drag across empty space to select several cards, then **Ctrl+G** to group them; the funnel button filters by color, tag, group or status.
@@ -84,7 +87,7 @@ Other scripts:
 | Formulas | `\` + letters: command suggestions · `↑`/`↓` choose · `Enter`/`Tab` insert · `Tab` next `{}` slot |
 | Anywhere | `Ctrl+,` settings |
 | Outline | `Tab` / `Shift+Tab` indent / outdent · `Alt+↑/↓` move · `Enter` new sibling · arrows navigate |
-| Reader | `Ctrl+F` search · `Ctrl+=` / `Ctrl+-` zoom · `Ctrl+0` fit width · `Esc` cancel |
+| Reader | `Ctrl+F` search · `Ctrl+=` / `Ctrl+-` zoom · `Ctrl+0` fit width · `Del` delete the selected ink, text or note · `Esc` cancel (a writing tool goes back to the pointer) |
 | Anywhere in a notebook | `Ctrl+Z` undo · `Ctrl+Y` / `Ctrl+Shift+Z` redo |
 | Review | `Space` show answer · `1`–`4` grade |
 
@@ -95,7 +98,7 @@ By default everything is stored locally in `%APPDATA%\MarginMap`:
 ```
 library.json          documents + notebooks index
 docs\<id>.pdf         imported PDFs (copies)
-notebooks\<id>.json   cards, mind map, whiteboard and review state
+notebooks\<id>.json   cards, mind map, whiteboard, writing on pages, review state
 assets\<id>.png       area-excerpt images and thumbnails
 ```
 
@@ -180,6 +183,6 @@ The stack is Electron 44, React 19, TypeScript, Vite 7, pdf.js 5, KaTeX 0.16 and
 
 ## Not (yet) implemented
 
-Compared with MarginNote 4, MarginMap doesn't have EPUB support, pen annotations directly on the PDF, cloud sync,
+Compared with MarginNote 4, MarginMap doesn't have EPUB support, cloud sync,
 OCR for scanned PDFs, or card-to-card links inside the mind map (the whiteboard's arrows cover part of that).
 The data model (`src/types.ts`) leaves room for these.

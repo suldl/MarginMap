@@ -93,6 +93,12 @@ const paths = {
     </>
   ),
   text: <path d="M5 6V4h14v2M12 4v16M9 20h6" />,
+  textbox: (
+    <>
+      <rect x="3" y="4" width="18" height="16" rx="2" strokeDasharray="3 2.5" />
+      <path d="M8.5 9h7M12 9v7" />
+    </>
+  ),
   swap: <path d="M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7" />,
   cards: (
     <>

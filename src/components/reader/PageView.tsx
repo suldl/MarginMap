@@ -1,6 +1,8 @@
-import { memo, useEffect, useRef, useState, type CSSProperties, type PointerEvent, type RefObject } from 'react';
+import { memo, useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode, type RefObject } from 'react';
 import { pdfjs, type PDFDocumentProxy, type RenderTask } from '../../lib/pdf';
-import type { ColorKey, PageRect } from '../../types';
+import { MARK_TOOLS, type ReaderTool } from '../../store/study';
+import type { ColorKey, DocMark, PageRect } from '../../types';
+import { MarkLayer, MarkOverlay } from './DocMarks';
 
 export interface PageHighlight {
   cardId: string;
@@ -22,6 +24,19 @@ interface Props {
   flash: { cardId: string; nonce: number } | null;
   searchQuery: string;
   areaMode: boolean;
+  /** Ink, text and notes written on this page. */
+  marks: DocMark[] | undefined;
+  docId: string;
+  tool: ReaderTool;
+  markSelectedId: string | null;
+  markDrag: { id: string; dx: number; dy: number } | null;
+  /** A mark open in an editor (drawn by the editor instead). */
+  markHiddenId: string | null;
+  onOpenNote(id: string): void;
+  /** Text or note tool clicked at (x, y), as fractions of the page. */
+  onPlaceMark(page: number, x: number, y: number): void;
+  /** Editors placed on the page. */
+  children?: ReactNode;
   /** `asAnswer`: Alt was held — the picture becomes an answer of the selected card. */
   onArea(pageNum: number, rect: { x: number; y: number; w: number; h: number }, pageEl: HTMLElement, asAnswer: boolean): void;
 }
@@ -150,7 +165,21 @@ export const PageView = memo(function PageView(p: Props) {
         )}
       </div>
       <div ref={textRef} className="textLayer" onMouseDown={(e) => e.currentTarget.classList.add('selecting')} />
+      {!!p.marks?.length && (
+        <MarkLayer
+          marks={p.marks}
+          width={p.width}
+          height={p.height}
+          interactive={p.tool === 'pointer'}
+          selectedId={p.markSelectedId}
+          drag={p.markDrag}
+          hiddenId={p.markHiddenId}
+          onOpenNote={p.onOpenNote}
+        />
+      )}
+      {MARK_TOOLS.includes(p.tool) && <MarkOverlay tool={p.tool} docId={p.docId} page={p.pageNum} marks={p.marks ?? []} onPlace={p.onPlaceMark} />}
       {p.areaMode && <AreaOverlay pageNum={p.pageNum} rootRef={rootRef} onArea={p.onArea} />}
+      {p.children}
     </div>
   );
 });

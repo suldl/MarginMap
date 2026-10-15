@@ -1,5 +1,5 @@
 import { backend } from '../backend';
-import type { AnswerCard, Card, DocMeta, Notebook } from '../types';
+import type { AnswerCard, Card, DocMeta, DocNote, DocText, Notebook } from '../types';
 import { buildTree } from './tree';
 
 export type ExportFormat = 'markdown' | 'opml' | 'json';
@@ -42,6 +42,16 @@ export function toMarkdown(nb: Notebook, docs: DocMeta[]): string {
     }
   };
   walk(tree.roots, 0);
+  // Text and sticky notes written on the documents' pages.
+  const written = (nb.marks ?? [])
+    .filter((m): m is DocText | DocNote => m.type !== 'ink' && !!m.text.trim())
+    .sort((a, b) => docName(docs, a.docId).localeCompare(docName(docs, b.docId)) || a.page - b.page || a.y - b.y);
+  if (written.length) {
+    lines.push('', '## Notes in the documents', '');
+    for (const m of written) {
+      lines.push(`- *${docName(docs, m.docId)}, p. ${m.page}${m.type === 'note' ? ' (note)' : ''}:* ${m.text.trim().replace(/\n+/g, ' ')}`);
+    }
+  }
   return lines.join('\n') + '\n';
 }
 

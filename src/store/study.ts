@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ColorKey } from '../types';
+import type { ColorKey, InkColor } from '../types';
 
 /** The study view's panes; any combination of them can be shown side by side. */
 export type Pane = 'doc' | 'map' | 'board';
@@ -7,8 +7,20 @@ export type Pane = 'doc' | 'map' | 'board';
 export const PANES: Pane[] = ['doc', 'map', 'board'];
 /** The map pane shows the cards as a mind map or as an indented outline. */
 export type MapView = 'mindmap' | 'outline';
-/** 'pointer' only clicks highlights and drags the page; 'text' selects text to excerpt; 'area' captures a box. */
-export type ReaderTool = 'pointer' | 'text' | 'area';
+/**
+ * 'pointer' clicks highlights and marks and drags the page; 'text' selects text to excerpt; 'area' captures a box.
+ * The others write on the page: pen, highlighter, eraser, text ('write') and sticky notes.
+ */
+export type ReaderTool = 'pointer' | 'text' | 'area' | 'pen' | 'marker' | 'eraser' | 'write' | 'note';
+/** Tools that write on the document. */
+export const MARK_TOOLS: ReaderTool[] = ['pen', 'marker', 'eraser', 'write', 'note'];
+
+/** Colour and size for writing on documents; `cover` makes new text boxes paint over the page. */
+export interface DocInkStyle {
+  color: InkColor;
+  size: 0 | 1 | 2;
+  cover: boolean;
+}
 export type ReaderSidebar = 'none' | 'toc' | 'search' | 'cards';
 
 export interface JumpRequest {
@@ -32,6 +44,7 @@ interface Prefs {
   inspector: boolean;
   /** Show an enlarged view of a picture card when it is double-clicked. */
   enlarge: boolean;
+  docInk: DocInkStyle;
 }
 
 interface StudyState extends Prefs {
@@ -64,6 +77,7 @@ function loadPrefs(): Prefs {
     color: 'yellow',
     inspector: true,
     enlarge: true,
+    docInk: { color: 'red', size: 1, cover: false },
   };
   try {
     const v = JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}');
@@ -75,6 +89,7 @@ function loadPrefs(): Prefs {
       color: v.color ?? defaults.color,
       inspector: v.inspector ?? defaults.inspector,
       enlarge: v.enlarge ?? defaults.enlarge,
+      docInk: { ...defaults.docInk, ...v.docInk },
     };
     // Before 0.7 there was one layout ('split' | 'doc' | 'map') plus one map mode.
     if (!v.panes && v.layout) {
@@ -143,7 +158,8 @@ useStudy.subscribe((s, prev) => {
     s.swapped !== prev.swapped ||
     s.color !== prev.color ||
     s.inspector !== prev.inspector ||
-    s.enlarge !== prev.enlarge
+    s.enlarge !== prev.enlarge ||
+    s.docInk !== prev.docInk
   ) {
     const prefs: Prefs = {
       panes: s.panes,
@@ -153,6 +169,7 @@ useStudy.subscribe((s, prev) => {
       color: s.color,
       inspector: s.inspector,
       enlarge: s.enlarge,
+      docInk: s.docInk,
     };
     try {
       localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));

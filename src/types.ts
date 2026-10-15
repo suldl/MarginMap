@@ -156,6 +156,54 @@ export interface Board {
 
 export const EMPTY_BOARD: Board = { items: [] };
 
+// ---------------------------------------------------------------------------
+// Document marks: ink, text and notes written on top of a document page.
+// Positions and sizes are fractions of the page (x and widths of its width,
+// y of its height), so they follow the zoom. They belong to the notebook.
+// ---------------------------------------------------------------------------
+
+interface DocMarkBase {
+  id: string;
+  docId: string;
+  page: number;
+}
+
+/** Pen or highlighter stroke. */
+export interface DocInk extends DocMarkBase {
+  type: 'ink';
+  /** x, y pairs. */
+  points: number[];
+  color: InkColor;
+  /** Stroke width, as a fraction of the page width. */
+  size: number;
+  highlighter?: boolean;
+}
+
+/** Text typed onto the page. */
+export interface DocText extends DocMarkBase {
+  type: 'text';
+  x: number;
+  y: number;
+  w: number;
+  text: string;
+  color: InkColor;
+  /** Font size, as a fraction of the page width. */
+  fontSize: number;
+  /** Paints over what is under it (to correct the document's text). */
+  cover?: boolean;
+}
+
+/** A sticky note: an icon on the page that opens to show its text. */
+export interface DocNote extends DocMarkBase {
+  type: 'note';
+  x: number;
+  y: number;
+  text: string;
+  color: ColorKey;
+}
+
+export type DocMark = DocInk | DocText | DocNote;
+
 export interface Notebook {
   version: 1;
   id: string;
@@ -164,6 +212,8 @@ export interface Notebook {
   cards: CardMap;
   board?: Board;
   groups?: CardGroup[];
+  /** Ink, text and notes on the documents' pages. */
+  marks?: DocMark[];
   createdAt: number;
   updatedAt: number;
 }

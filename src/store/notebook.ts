@@ -3,7 +3,7 @@ import { backend } from '../backend';
 import { newReviewState } from '../lib/srs';
 import { ancestors, buildTree, childrenOf, descendantIds, isDescendant } from '../lib/tree';
 import { debounce, uid } from '../lib/util';
-import { EMPTY_BOARD, type Board, type BoardItem, type Card, type CardGroup, type CardMap, type ColorKey, type Notebook } from '../types';
+import { EMPTY_BOARD, type Board, type BoardItem, type Card, type CardGroup, type CardMap, type ColorKey, type DocMark, type Notebook } from '../types';
 import { notebookMeta, useLibrary } from './library';
 import { editSurface } from './study';
 
@@ -18,14 +18,24 @@ export interface NewCard {
   mapPos?: Card['mapPos'];
 }
 
-/** One undo step: cards, groups and whiteboard together. */
+/** One undo step: cards, groups, whiteboard and document marks together. */
 interface Snapshot {
   cards: CardMap;
   board: Board;
   groups: CardGroup[];
+  marks: DocMark[];
+}
+
+/** What a change replaces (anything left out stays as it is). */
+interface Change {
+  cards?: CardMap;
+  board?: Board;
+  groups?: CardGroup[];
+  marks?: DocMark[];
 }
 
 const NO_GROUPS: CardGroup[] = [];
+const NO_MARKS: DocMark[] = [];
 
 interface NotebookState {
   nb: Notebook | null;
@@ -90,6 +100,12 @@ interface NotebookState {
   /** Removes items; arrows attached to them go too. */
   boardRemove(ids: string[]): void;
   boardReorder(ids: string[], to: 'front' | 'back'): void;
+
+  /** Document marks (ink, text, notes on pages; all undoable). */
+  marksAdd(marks: DocMark[]): void;
+  /** Replaces marks that share an id with the given ones. */
+  marksReplace(marks: DocMark[], coalesceKey?: string): void;
+  marksRemove(ids: string[], coalesceKey?: string): void;
   undo(): void;
   redo(): void;
 }
@@ -122,7 +138,11 @@ export function groupsOf(nb: Notebook | null): CardGroup[] {
   return nb?.groups ?? NO_GROUPS;
 }
 
-const snapshot = (nb: Notebook): Snapshot => ({ cards: nb.cards, board: boardOf(nb), groups: groupsOf(nb) });
+export function marksOf(nb: Notebook | null): DocMark[] {
+  return nb?.marks ?? NO_MARKS;
+}
+
+const snapshot = (nb: Notebook): Snapshot => ({ cards: nb.cards, board: boardOf(nb), groups: groupsOf(nb), marks: marksOf(nb) });
 
 /** Drops groups that no longer have any member card. */
 function pruneGroups(groups: CardGroup[], cards: CardMap): CardGroup[] {
@@ -162,13 +182,22 @@ function placeAmongSiblings(cards: CardMap, card: Card, parentId: string | null,
 
 export const useNotebook = create<NotebookState>((set, get) => {
   /** Applies a change with undo history (consecutive edits sharing a key coalesce). */
-  const commit = (cards: CardMap, key?: string, extra?: Partial<NotebookState>, board?: Board, groups?: CardGroup[]) => {
+  const commit = (change: Change, key?: string, extra?: Partial<NotebookState>) => {
     const s = get();
     if (!s.nb) return;
     const now = Date.now();
     const coalesce = !!key && s.histKey === key && now - s.histAt < 2000;
-    const nextGroups = pruneGroups(groups ?? groupsOf(s.nb), cards);
-    const nb = { ...s.nb, cards, board: board ?? s.nb.board, groups: nextGroups.length ? nextGroups : undefined, updatedAt: now };
+    const cards = change.cards ?? s.nb.cards;
+    const nextGroups = pruneGroups(change.groups ?? groupsOf(s.nb), cards);
+    const marks = change.marks ?? s.nb.marks;
+    const nb = {
+      ...s.nb,
+      cards,
+      board: change.board ?? s.nb.board,
+      groups: nextGroups.length ? nextGroups : undefined,
+      marks: marks?.length ? marks : undefined,
+      updatedAt: now,
+    };
     set({
       nb,
       past: coalesce ? s.past : [...s.past.slice(-99), snapshot(s.nb)],
@@ -201,7 +230,14 @@ export const useNotebook = create<NotebookState>((set, get) => {
   const restore = (snap: Snapshot, past: Snapshot[], future: Snapshot[]) => {
     const s = get();
     if (!s.nb) return;
-    const nb = { ...s.nb, cards: snap.cards, board: snap.board, groups: snap.groups.length ? snap.groups : undefined, updatedAt: Date.now() };
+    const nb = {
+      ...s.nb,
+      cards: snap.cards,
+      board: snap.board,
+      groups: snap.groups.length ? snap.groups : undefined,
+      marks: snap.marks.length ? snap.marks : undefined,
+      updatedAt: Date.now(),
+    };
     set({
       nb,
       past,
@@ -310,10 +346,9 @@ export const useNotebook = create<NotebookState>((set, get) => {
         ? { items: [...boardOf(nb).items, { id: uid(), type: 'card' as const, cardId: card.id, x: at.x, y: at.y, w: at.w ?? 260 }] }
         : undefined;
       commit(
-        placeAmongSiblings(cards, card, where.parentId, index),
+        { cards: placeAmongSiblings(cards, card, where.parentId, index), board },
         undefined,
         opts?.select === false ? {} : { selectedId: card.id, selectedIds: [card.id] },
-        board,
       );
       return card.id;
     },
@@ -322,7 +357,7 @@ export const useNotebook = create<NotebookState>((set, get) => {
       const nb = get().nb;
       const card = nb?.cards[id];
       if (!nb || !card) return;
-      commit({ ...nb.cards, [id]: { ...card, ...patch, updatedAt: Date.now() } }, coalesceKey ? `${id}:${coalesceKey}` : undefined);
+      commit({ cards: { ...nb.cards, [id]: { ...card, ...patch, updatedAt: Date.now() } } }, coalesceKey ? `${id}:${coalesceKey}` : undefined);
     },
 
     updateCards(patches, coalesceKey) {
@@ -336,7 +371,7 @@ export const useNotebook = create<NotebookState>((set, get) => {
         cards[id] = { ...cards[id], ...patch, updatedAt: now };
         changed = true;
       }
-      if (changed) commit(cards, coalesceKey ? `bulk:${coalesceKey}` : undefined);
+      if (changed) commit({ cards }, coalesceKey ? `bulk:${coalesceKey}` : undefined);
     },
 
     deleteCards(ids) {
@@ -364,7 +399,7 @@ export const useNotebook = create<NotebookState>((set, get) => {
       // Cards placed on the whiteboard leave it with them.
       const board = boardOf(nb);
       const placed = new Set(board.items.filter((it) => it.type === 'card' && doomed.has(it.cardId)).map((it) => it.id));
-      commit(cards, undefined, { selectedId: nextSel, selectedIds: nextSel ? [nextSel] : [], editingId: null }, pruneBoard(board, placed));
+      commit({ cards, board: pruneBoard(board, placed) }, undefined, { selectedId: nextSel, selectedIds: nextSel ? [nextSel] : [], editingId: null });
       // Images are kept on disk so undo can restore them.
     },
 
@@ -390,7 +425,7 @@ export const useNotebook = create<NotebookState>((set, get) => {
         cards = placeAmongSiblings(cards, { ...cards[id], mapPos: undefined, updatedAt: Date.now() }, parentId, target);
         at = target + 1;
       }
-      commit(cards);
+      commit({ cards });
     },
 
     indent(id) {
@@ -451,7 +486,7 @@ export const useNotebook = create<NotebookState>((set, get) => {
         if (enable && !c.review) cards[id] = { ...c, review: newReviewState() };
         if (!enable && c.review) cards[id] = { ...c, review: undefined };
       }
-      commit(cards);
+      commit({ cards });
     },
 
     addTag(ids, tag) {
@@ -488,14 +523,14 @@ export const useNotebook = create<NotebookState>((set, get) => {
       const group: CardGroup = { id: uid(), name: init?.name?.trim() || `Group ${n}`, color: init?.color ?? nb.cards[ids[0]].color };
       const cards = { ...nb.cards };
       for (const id of ids) cards[id] = { ...cards[id], groupId: group.id };
-      commit(cards, undefined, undefined, undefined, [...groups, group]);
+      commit({ cards, groups: [...groups, group] });
       return group.id;
     },
 
     updateGroup(id, patch) {
       const nb = get().nb;
       if (!nb) return;
-      commit(nb.cards, undefined, undefined, undefined, groupsOf(nb).map((g) => (g.id === id ? { ...g, ...patch } : g)));
+      commit({ groups: groupsOf(nb).map((g) => (g.id === id ? { ...g, ...patch } : g)) });
     },
 
     ungroup(id) {
@@ -503,13 +538,13 @@ export const useNotebook = create<NotebookState>((set, get) => {
       if (!nb) return;
       const cards = { ...nb.cards };
       for (const c of Object.values(cards)) if (c.groupId === id) cards[c.id] = { ...c, groupId: undefined };
-      commit(cards, undefined, undefined, undefined, groupsOf(nb).filter((g) => g.id !== id));
+      commit({ cards, groups: groupsOf(nb).filter((g) => g.id !== id) });
     },
 
     boardAdd(items) {
       const nb = get().nb;
       if (!nb || !items.length) return;
-      commit(nb.cards, undefined, undefined, { items: [...boardOf(nb).items, ...items] });
+      commit({ board: { items: [...boardOf(nb).items, ...items] } });
     },
 
     boardReplace(items, coalesceKey) {
@@ -517,7 +552,7 @@ export const useNotebook = create<NotebookState>((set, get) => {
       if (!nb || !items.length) return;
       const byId = new Map(items.map((it) => [it.id, it]));
       const next = { items: boardOf(nb).items.map((it) => byId.get(it.id) ?? it) };
-      commit(nb.cards, coalesceKey ? `board:${coalesceKey}` : undefined, undefined, next);
+      commit({ board: next }, coalesceKey ? `board:${coalesceKey}` : undefined);
     },
 
     boardRemove(ids) {
@@ -525,7 +560,7 @@ export const useNotebook = create<NotebookState>((set, get) => {
       if (!nb || !ids.length) return;
       const board = boardOf(nb);
       const next = pruneBoard(board, new Set(ids));
-      if (next !== board) commit(nb.cards, undefined, undefined, next);
+      if (next !== board) commit({ board: next });
     },
 
     boardReorder(ids, to) {
@@ -535,7 +570,29 @@ export const useNotebook = create<NotebookState>((set, get) => {
       const items = boardOf(nb).items;
       const moving = items.filter((it) => set_.has(it.id));
       const rest = items.filter((it) => !set_.has(it.id));
-      commit(nb.cards, undefined, undefined, { items: to === 'front' ? [...rest, ...moving] : [...moving, ...rest] });
+      commit({ board: { items: to === 'front' ? [...rest, ...moving] : [...moving, ...rest] } });
+    },
+
+    marksAdd(marks) {
+      const nb = get().nb;
+      if (!nb || !marks.length) return;
+      commit({ marks: [...marksOf(nb), ...marks] });
+    },
+
+    marksReplace(marks, coalesceKey) {
+      const nb = get().nb;
+      if (!nb || !marks.length) return;
+      const byId = new Map(marks.map((m) => [m.id, m]));
+      commit({ marks: marksOf(nb).map((m) => byId.get(m.id) ?? m) }, coalesceKey ? `marks:${coalesceKey}` : undefined);
+    },
+
+    marksRemove(ids, coalesceKey) {
+      const nb = get().nb;
+      if (!nb || !ids.length) return;
+      const gone = new Set(ids);
+      const marks = marksOf(nb);
+      const next = marks.filter((m) => !gone.has(m.id));
+      if (next.length !== marks.length) commit({ marks: next }, coalesceKey ? `marks:${coalesceKey}` : undefined);
     },
 
     undo() {
