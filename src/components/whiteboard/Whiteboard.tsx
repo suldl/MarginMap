@@ -7,7 +7,7 @@ import { useStudy } from '../../store/study';
 import { gridSpacing, useSettings } from '../../store/settings';
 import { useUi } from '../../store/ui';
 import { COLORS, type ArrowEnd, type BoardCardItem, type BoardItem, type BoardText, type InkColor } from '../../types';
-import { answersMenuItem, deleteWithUndoHint, groupSelection, locateCard, openGroupMenu, renameGroup } from '../cardActions';
+import { answersMenuItem, deleteWithUndoHint, groupSelection, locateCard, makeAnswers, openGroupMenu, renameGroup } from '../cardActions';
 import { CardPreview, canEnlarge } from '../CardPreview';
 import { Icon, type IconName } from '../Icon';
 import { useLatexAssist } from '../LatexAssist';
@@ -43,7 +43,18 @@ interface Style {
 
 type Interaction =
   | { kind: 'pan'; sx: number; sy: number; vx: number; vy: number }
-  | { kind: 'move'; ids: string[]; start: Pt; dx: number; dy: number; moved: boolean; clickedId: string; shift: boolean }
+  | {
+      kind: 'move';
+      ids: string[];
+      start: Pt;
+      dx: number;
+      dy: number;
+      moved: boolean;
+      clickedId: string;
+      shift: boolean;
+      /** Alt held over another card: the moved cards become its answers. */
+      answerTo?: string | null;
+    }
   | { kind: 'resize'; id: string; start: Pt; dx: number; dy: number }
   | { kind: 'marquee'; start: Pt; end: Pt; base: string[] }
   | { kind: 'draw'; points: number[]; marker: boolean }
@@ -492,7 +503,11 @@ export function Whiteboard() {
         const dx = p.x - cur.start.x;
         const dy = p.y - cur.start.y;
         const moved = cur.moved || Math.hypot(dx, dy) * viewRef.current.k > 3;
-        setIx({ ...cur, dx, dy, moved });
+        const target =
+          moved && e.altKey && cur.ids.some((id) => liveById.get(id)?.type === 'card')
+            ? topHit(p, (it) => it.type === 'card' && !cur.ids.includes(it.id))
+            : null;
+        setIx({ ...cur, dx, dy, moved, answerTo: target?.id ?? null });
         break;
       }
       case 'resize':
@@ -544,6 +559,15 @@ export function Whiteboard() {
     const store = useNotebook.getState();
     switch (cur.kind) {
       case 'move': {
+        const target = cur.answerTo && e.altKey ? liveById.get(cur.answerTo) : undefined;
+        if (cur.moved && target?.type === 'card') {
+          const cardIds = cur.ids.flatMap((id) => {
+            const it = liveById.get(id);
+            return it?.type === 'card' ? [it.cardId] : [];
+          });
+          makeAnswers(cardIds, target.cardId);
+          return;
+        }
         if (cur.moved && cur.ids.length) {
           store.boardReplace(cur.ids.map((id) => translateItem(items.find((i) => i.id === id)!, round1(cur.dx), round1(cur.dy))));
           return;
@@ -1043,6 +1067,7 @@ export function Whiteboard() {
             faded={false}
           />
         )}
+        {ix?.kind === 'move' && ix.answerTo && resolve(ix.answerTo) && <SelBox box={resolve(ix.answerTo)!} k={view.k} accent />}
         {ix?.kind === 'arrow' && (
           <>
             {ix.toItem && resolve(ix.toItem) && <SelBox box={resolve(ix.toItem)!} k={view.k} accent />}
@@ -1188,7 +1213,7 @@ export function Whiteboard() {
 }
 
 const HINTS: Record<Tool, string> = {
-  select: 'Drag to move · double-click empty space for a new card · Shift+click to multi-select',
+  select: 'Drag to move (Alt+drop on a card: make it an answer) · double-click empty space for a new card · Shift+click to multi-select',
   hand: 'Drag to pan',
   pen: 'Draw freehand',
   marker: 'Highlight over anything',

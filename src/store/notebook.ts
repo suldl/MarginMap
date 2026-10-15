@@ -3,7 +3,7 @@ import { backend } from '../backend';
 import { newReviewState } from '../lib/srs';
 import { ancestors, buildTree, childrenOf, descendantIds, isDescendant } from '../lib/tree';
 import { debounce, uid } from '../lib/util';
-import { EMPTY_BOARD, type Board, type BoardItem, type Card, type CardGroup, type CardMap, type ColorKey, type DocMark, type Notebook } from '../types';
+import { EMPTY_BOARD, type AnswerCard, type Board, type BoardItem, type Card, type CardGroup, type CardMap, type ColorKey, type DocMark, type Notebook } from '../types';
 import { notebookMeta, useLibrary } from './library';
 import { editSurface } from './study';
 
@@ -76,6 +76,11 @@ interface NotebookState {
   /** Updates several cards in one undo step. */
   updateCards(patches: Record<string, Partial<Card>>, coalesceKey?: string): void;
   deleteCards(ids: string[]): void;
+  /**
+   * Turns cards into answer cards of `targetId` (title, excerpt and notes become the answer's text;
+   * the picture and source come along). Their child cards move up in their place. Returns how many were converted.
+   */
+  convertToAnswers(ids: string[], targetId: string): number;
   moveCard(id: string, parentId: string | null, index: number): void;
   /** Moves several cards (in the given order) under one parent, starting at `index`, in one undo step. */
   moveCards(ids: string[], parentId: string | null, index: number): void;
@@ -401,6 +406,47 @@ export const useNotebook = create<NotebookState>((set, get) => {
       const placed = new Set(board.items.filter((it) => it.type === 'card' && doomed.has(it.cardId)).map((it) => it.id));
       commit({ cards, board: pruneBoard(board, placed) }, undefined, { selectedId: nextSel, selectedIds: nextSel ? [nextSel] : [], editingId: null });
       // Images are kept on disk so undo can restore them.
+    },
+
+    convertToAnswers(ids, targetId) {
+      const nb = get().nb;
+      const target = nb?.cards[targetId];
+      if (!nb || !target) return 0;
+      const hasContent = (c: Card) => !!(c.title.trim() || c.excerpt.trim() || c.comment.trim() || c.imageId || c.answers?.length);
+      const doomed = ids.filter((id, i) => id !== targetId && ids.indexOf(id) === i && nb.cards[id] && hasContent(nb.cards[id]));
+      if (!doomed.length) return 0;
+      const gone = new Set(doomed);
+      const now = Date.now();
+      const answers: AnswerCard[] = [...(target.answers ?? [])];
+      for (const id of doomed) {
+        const c = nb.cards[id];
+        const text = [c.title.trim(), c.excerpt.trim(), c.comment.trim()].filter(Boolean).join('\n\n');
+        if (text || c.imageId) answers.push({ id: uid(), text, imageId: c.imageId, source: c.source, createdAt: now });
+        // Its own answers come along.
+        answers.push(...(c.answers ?? []));
+      }
+      const cards = { ...nb.cards };
+      for (const id of doomed) delete cards[id];
+      // Children of a converted card take its place under the nearest ancestor that stays.
+      const keptParent = (id: string | null): string | null => {
+        let p = id;
+        while (p && gone.has(p)) p = nb.cards[p]?.parentId ?? null;
+        return p;
+      };
+      const tree = buildTree(nb.cards);
+      for (const id of doomed) {
+        const kids = (tree.children.get(id) ?? []).filter((k) => !gone.has(k.id));
+        const card = nb.cards[id];
+        kids.forEach((k, i) => {
+          cards[k.id] = { ...k, parentId: keptParent(card.parentId), order: card.order + (i + 1) / (kids.length + 1), mapPos: undefined, updatedAt: now };
+        });
+      }
+      cards[targetId] = { ...cards[targetId], answers, updatedAt: now };
+      // Cards placed on the whiteboard leave it with them.
+      const board = boardOf(nb);
+      const placed = new Set(board.items.filter((it) => it.type === 'card' && gone.has(it.cardId)).map((it) => it.id));
+      commit({ cards, board: pruneBoard(board, placed) }, undefined, { selectedId: targetId, selectedIds: [targetId], editingId: null });
+      return doomed.length;
     },
 
     moveCard(id, parentId, index) {

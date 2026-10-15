@@ -1172,6 +1172,23 @@ select {
 .card-node.drop-child {
   box-shadow: 0 0 0 3px var(--accent), var(--shadow-md);
 }
+/* Alt-drop target: the dragged cards will become this card's answers. */
+.card-node.drop-answer {
+  box-shadow: 0 0 0 3px var(--c-green), var(--shadow-md);
+}
+.card-node.drop-answer::before {
+  content: 'Make answer';
+  position: absolute;
+  left: -1.5px;
+  bottom: calc(100% + 6px);
+  padding: 1px 7px;
+  border-radius: 9px;
+  background: var(--c-green);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
 .card-node.unmeasured {
   opacity: 0;
 }
@@ -1390,6 +1407,9 @@ select {
 }
 .ol-row.drop-child {
   box-shadow: inset 0 0 0 2px var(--accent);
+}
+.ol-row.drop-answer {
+  box-shadow: inset 0 0 0 2px var(--c-green);
 }
 .ol-row.drop-before::before,
 .ol-row.drop-after::after {

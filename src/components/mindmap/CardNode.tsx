@@ -14,6 +14,8 @@ interface Props {
   editing: boolean;
   dragging: boolean;
   dropChild: boolean;
+  /** Alt-dragged cards would become this card's answers. */
+  dropAnswer: boolean;
   searchState: 'match' | 'dim' | null;
   flashNonce: number;
   onPointerDown(e: React.PointerEvent, id: string): void;
@@ -55,6 +57,7 @@ export const CardNode = memo(function CardNode(p: Props) {
         p.selected && 'selected',
         p.dragging && 'dragging',
         p.dropChild && 'drop-child',
+        p.dropAnswer && 'drop-answer',
         !p.measured && 'unmeasured',
         p.searchState,
       ]
