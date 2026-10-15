@@ -456,10 +456,8 @@ export function MindMap() {
           store.toggleSelected(primary);
           return;
         }
-        // Plain click: select and follow the excerpt in the document.
+        // Plain click: select only (the page tag, Space or the menu locate the excerpt).
         store.select(primary);
-        const card = all[primary];
-        if (card?.source && useStudy.getState().layout !== 'map') locateCard(card, { silent: true });
         return;
       }
       const t = d.target;
@@ -964,7 +962,7 @@ export function MindMap() {
       )}
 
       <div className="map-hint" style={vpSize.w && vpSize.w < 1000 ? { display: 'none' } : undefined}>
-        {studyLayout !== 'map' && <span>Click a card to jump to its excerpt</span>}
+        {studyLayout !== 'map' && <span>Click a card's page tag or press Space to find its excerpt</span>}
         <span>
           {mapDrag === 'select' ? 'Drag empty space to select · right-drag to pan' : 'Drag to pan · Shift+drag to select'} · drag cards anywhere
         </span>

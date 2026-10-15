@@ -19,7 +19,7 @@ A MarginNote-style study app for Windows. It covers the core MarginNote workflow
 | **Classify & filter** | Filter the map by color, tag, group or status (in review, due, has notes, image, placed freely) and select every match; tag several cards at once |
 | **Formulas** | LaTeX in titles, excerpts, notes and whiteboard text — `$…$` inline, `$$…$$` display — rendered with KaTeX. Typing `\` suggests commands with live previews; Tab jumps between the `{}` slots of `\frac{}{}` and friends |
 | **Whiteboard** | A free canvas per notebook: drag cards anywhere, draw with pen and highlighter, add rectangles, ellipses, text and arrows that stay connected to cards as you move them. **E** toggles pen ⇄ eraser; works with pen tablets (the eraser end of a pen erases too) |
-| **Two-way links** | Click a card → the document jumps to the excerpt and flashes it. Click a highlight in the PDF → its card is selected in the map |
+| **Two-way links** | Clicking a card only selects it; click its page tag (*p.3*), press `Space` or choose *Locate in document* → the document jumps to the excerpt and flashes it. Click a highlight in the PDF → its card is selected in the map |
 | **Outline** | The same cards as an indented outline, with drag & drop and Tab / Shift+Tab indent/outdent |
 | **Card panel** | Title, color, editable excerpt, notes, tags, source link, review toggle |
 | **Review** | Spaced repetition (SM-2, Anki-like): Again / Hard / Good / Easy, per notebook or across all notebooks |

@@ -436,7 +436,7 @@ const SHORTCUTS: [string, [string, string][]][] = [
       ['Drag a card to empty space', 'Place it freely (Alt: detach)'],
       ['Right or middle drag', 'Pan'],
       ['Del', 'Delete selected cards'],
-      ['Space', 'Locate in document'],
+      ['Space', 'Locate in document (or click the card’s page tag)'],
       ['Ctrl+F', 'Find cards'],
     ],
   ],

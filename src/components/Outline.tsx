@@ -3,6 +3,7 @@ import { buildTree, childrenOf, flatten } from '../lib/tree';
 import { groupsOf, useNotebook } from '../store/notebook';
 import { useStudy } from '../store/study';
 import type { Card } from '../types';
+import { SourceBadge } from './CardBody';
 import { addChild, addSibling, deleteWithUndoHint, groupSelection, locateCard, openCardMenu } from './cardActions';
 import { Icon } from './Icon';
 import { useLatexAssist } from './LatexAssist';
@@ -226,7 +227,6 @@ export function Outline() {
                 }
               }
               nb.select(card.id);
-              if (card.source && useStudy.getState().layout !== 'map') locateCard(card, { silent: true });
             }}
             onDoubleClick={() => useNotebook.getState().setEditing(card.id)}
             onContextMenu={(e) => {
@@ -277,7 +277,7 @@ export function Outline() {
                 <Icon name="cards" size={11} />
               </span>
             )}
-            {card.source && <span className="badge">p.{card.source.page}</span>}
+            <SourceBadge card={card} />
           </div>
         );
       })}

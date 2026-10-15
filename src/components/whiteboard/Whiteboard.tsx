@@ -114,7 +114,6 @@ export function Whiteboard() {
   const reveal = useStudy((s) => s.reveal);
   const flash = useStudy((s) => s.flash);
   const enlarge = useStudy((s) => s.enlarge);
-  const studyLayout = useStudy((s) => s.layout);
   const canvasBg = useSettings((s) => s.canvasBg);
   const cards = nb.cards;
   const items = boardOf(nb).items;
@@ -519,13 +518,8 @@ export function Whiteboard() {
           return;
         }
         if (!cur.clickedId) return; // a click on a group label (already selected)
-        // A plain click.
+        // A plain click selects (the page tag or "Locate in document" finds the excerpt).
         if (!cur.shift) selectItems([cur.clickedId]);
-        const it = liveById.get(cur.clickedId);
-        if (it?.type === 'card' && !cur.shift) {
-          const card = cards[it.cardId];
-          if (card?.source && studyLayout !== 'map') locateCard(card, { silent: true });
-        }
         return;
       }
       case 'resize': {

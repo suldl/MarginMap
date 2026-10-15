@@ -1098,6 +1098,18 @@ select {
   padding: 0 6px;
   background: color-mix(in srgb, var(--cc) 22%, transparent);
 }
+/* The page tag of an excerpt card is a link to the excerpt in the document. */
+.source-badge {
+  border: none;
+  font-family: inherit;
+  line-height: inherit;
+  cursor: pointer;
+}
+.source-badge:hover {
+  background: var(--accent-soft) !important;
+  color: var(--accent);
+  text-decoration: underline;
+}
 .card-edit {
   width: 100%;
   min-width: 180px;

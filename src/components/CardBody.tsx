@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { useAssetUrl } from '../hooks/useAssetUrl';
 import { useNotebook } from '../store/notebook';
 import type { Card } from '../types';
-import { addChild, addSibling } from './cardActions';
+import { addChild, addSibling, locateCard } from './cardActions';
 import { Icon } from './Icon';
 import { useLatexAssist } from './LatexAssist';
 import { MathText } from './MathText';
@@ -37,7 +37,7 @@ export function CardBody({ card, editing, structural = true }: { card: Card; edi
       )}
       {(card.source || card.review || card.tags.length > 0) && (
         <div className="card-foot">
-          {card.source && <span className="badge">p.{card.source.page}</span>}
+          <SourceBadge card={card} />
           {card.review && (
             <span className="badge" title="In review">
               <Icon name="cards" size={11} />
@@ -51,6 +51,25 @@ export function CardBody({ card, editing, structural = true }: { card: Card; edi
         </div>
       )}
     </>
+  );
+}
+
+/** The page tag of an excerpt card; clicking it shows the excerpt in the document (clicking the card itself only selects it). */
+export function SourceBadge({ card }: { card: Card }) {
+  if (!card.source) return null;
+  return (
+    <button
+      className="badge source-badge"
+      title="Show in document"
+      onPointerDown={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation();
+        locateCard(card);
+      }}
+    >
+      p.{card.source.page}
+    </button>
   );
 }
 
