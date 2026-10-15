@@ -788,20 +788,18 @@ select {
   pointer-events: none;
   z-index: 1;
 }
+/* Excerpts on the page are marked without filling: text is underlined, pictures are outlined. */
 .hl {
   position: absolute;
-  background: color-mix(in srgb, var(--cc) 42%, transparent);
-  mix-blend-mode: multiply;
-  border-radius: 2px;
+  border-bottom: max(1.5px, calc(var(--scale-factor) * 1.6px)) solid color-mix(in srgb, var(--cc) 85%, black);
 }
 .hl.area {
-  background: color-mix(in srgb, var(--cc) 14%, transparent);
-  border: 2px solid color-mix(in srgb, var(--cc) 85%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--cc) 85%, black);
   border-radius: 3px;
-  mix-blend-mode: normal;
 }
 .hl.selected {
   box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--cc) 90%, black);
+  border-radius: 2px;
 }
 .hl.flash {
   animation: hl-flash 1.4s ease-out;
@@ -809,8 +807,9 @@ select {
 @keyframes hl-flash {
   0%,
   40% {
-    background: color-mix(in srgb, var(--cc) 85%, transparent);
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--cc) 50%, transparent);
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--cc) 80%, transparent),
+      0 0 12px 4px color-mix(in srgb, var(--cc) 45%, transparent);
   }
 }
 .search-hit {
