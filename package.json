@@ -1,7 +1,7 @@
 {
   "name": "marginmap",
   "productName": "MarginMap",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Read PDFs, excerpt into mind maps, review with flashcards — a MarginNote-style study app for Windows.",
   "main": "dist-electron/main.js",
   "private": true,
