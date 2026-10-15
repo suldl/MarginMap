@@ -27,6 +27,21 @@ export interface ReviewState {
   last?: number;
 }
 
+/**
+ * An answer attached to a card. Answers stay out of the map; the card's Answer button opens
+ * them in a window together with the card, and they are on the back of its flashcard.
+ */
+export interface AnswerCard {
+  id: string;
+  /** Text with optional LaTeX. */
+  text: string;
+  /** A picture answer (area excerpt). */
+  imageId?: string;
+  /** Where it was excerpted from, when it came from a document. */
+  source?: SourceAnchor;
+  createdAt: number;
+}
+
 export interface Card {
   id: string;
   parentId: string | null;
@@ -49,6 +64,7 @@ export interface Card {
   mapPos?: { x: number; y: number };
   /** The group (see `Notebook.groups`) this card belongs to. */
   groupId?: string;
+  answers?: AnswerCard[];
   createdAt: number;
   updatedAt: number;
 }

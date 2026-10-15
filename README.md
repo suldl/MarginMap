@@ -17,12 +17,13 @@ A MarginNote-style study app for Windows. It covers the core MarginNote workflow
 | **Mind map** | Horizontal tree with pan/zoom, drag & drop to reparent or reorder, collapse/expand, find (Ctrl+F), right-click menu, keyboard editing. Double-click a picture card to see it **enlarged** (big image, full text, notes) |
 | **Free placement** | Drag a card into empty space and it stays there, still connected to its parent (Alt = detach as an independent card). Double-click anywhere to put a new card on that spot. *Tidy up* returns everything to the automatic layout |
 | **Selection & groups** | Drag a selection box over cards, Ctrl/Shift+click to add, Ctrl+A for all. Move, recolor, tag, review or delete them together. **Ctrl+G** groups them into a named, colored frame (also shown on the whiteboard) |
-| **Classify & filter** | Filter the map by color, tag, group or status (in review, due, has notes, image, placed freely) and select every match; tag several cards at once |
+| **Classify & filter** | Filter the map by color, tag, group or status (in review, due, has notes, has answers, image, placed freely) and select every match; tag several cards at once |
 | **Formulas** | LaTeX in titles, excerpts, notes and whiteboard text — `$…$` inline, `$$…$$` display — rendered with KaTeX. Typing `\` suggests commands with live previews; Tab jumps between the `{}` slots of `\frac{}{}` and friends |
 | **Whiteboard** | A free canvas per notebook: drag cards anywhere, draw with pen and highlighter, add rectangles, ellipses, text and arrows that stay connected to cards as you move them. **E** toggles pen ⇄ eraser; works with pen tablets (the eraser end of a pen erases too). The **area excerpt** tool (`C`) turns a box of the board — sketches, text, cards — into a new picture card (desktop app) |
 | **Two-way links** | Clicking a card only selects it; click its page tag (*p.3*), press `Space` or choose *Locate in document* → the document jumps to the excerpt and flashes it. Click a highlight in the PDF → its card is selected in the map |
 | **Outline** | The same cards as an indented outline (the outline button next to the pane switches), with drag & drop and Tab / Shift+Tab indent/outdent |
-| **Card panel** | Title, color, editable excerpt, notes, tags, source link, review toggle |
+| **Answer cards** | Give a card any number of answer cards — typed (with formulas), excerpted text (select the card, select text, choose *Answer*) or pictures (area tool + `Alt`). They stay off the map: the card's **Answer** button opens a window with the card and its answers. They are also on the back of the card's flashcard and in exports |
+| **Card panel** | Title, color, editable excerpt, notes, answers, tags, source link, review toggle |
 | **Review** | Spaced repetition (SM-2, Anki-like): Again / Hard / Good / Easy, per notebook or across all notebooks |
 | **Export** | Markdown, OPML (importable by mind-map apps such as XMind and MindNode), JSON backup |
 | **Settings** | Theme (system/light/dark), accent color, interface size, canvas background, connector style, drag behavior, formula options, data folder (**Ctrl+,**) |
@@ -70,7 +71,9 @@ Other scripts:
    Write formulas as `$E=mc^2$` anywhere in a card.
    Turn on the **whiteboard** (its switch in the title bar; it can sit next to the document and the mind map) to arrange cards freely, sketch and connect them with arrows.
    Open the **Cards** panel there to drag cards in, and new excerpts land on the board while it is showing.
-5. **Review**: switch on *Review as flashcard* in the card panel (or right-click → *Add with all children to review*), then press **Review**.
+5. **Answers**: right-click a card → *Add answer…* (or *Add* under Answers in the card panel). With a card selected, select text in the document and choose **Answer** in the popup to add it as an answer instead of a new card.
+   The card then shows an **Answer** button that opens the card together with its answers.
+6. **Review**: switch on *Review as flashcard* in the card panel (or right-click → *Add with all children to review*), then press **Review**.
 
 ### Keyboard shortcuts
 

@@ -1,9 +1,10 @@
 import { buildTree, childrenOf } from '../lib/tree';
+import { uid } from '../lib/util';
 import { useLibrary } from '../store/library';
 import { groupsOf, useNotebook } from '../store/notebook';
 import { useStudy } from '../store/study';
 import { useUi, type MenuItem } from '../store/ui';
-import { COLORS, type Card, type ColorKey } from '../types';
+import { COLORS, type AnswerCard, type Card, type ColorKey, type SourceAnchor } from '../types';
 import { addCardToBoard, placeCards, placedCardIds } from './whiteboard/boardActions';
 
 /** Shared card commands used by the mind map, outline, inspector and menus. */
@@ -36,8 +37,11 @@ export function deleteWithUndoHint(ids: string[]) {
 
 /** Scrolls the reader to a card's excerpt, adding its document to the notebook if needed. */
 export function locateCard(card: Card, opts: { silent?: boolean } = {}) {
-  const src = card.source;
-  if (!src) return false;
+  return card.source ? locateSource(card.source, card.id, opts) : false;
+}
+
+/** Scrolls the reader to an excerpt's place (flashing the card's highlight when `cardId` is given). */
+export function locateSource(src: SourceAnchor, cardId?: string, opts: { silent?: boolean } = {}) {
   const nb = useNotebook.getState();
   const doc = useLibrary.getState().docs.find((d) => d.id === src.docId);
   if (!doc) {
@@ -46,8 +50,41 @@ export function locateCard(card: Card, opts: { silent?: boolean } = {}) {
   }
   if (!nb.nb?.docIds.includes(src.docId)) nb.addDoc(src.docId);
   const top = Math.min(...src.rects.filter((r) => r.page === src.page).map((r) => r.y));
-  useStudy.getState().jumpTo({ docId: src.docId, page: src.page, y: Number.isFinite(top) ? top : 0, cardId: card.id });
+  useStudy.getState().jumpTo({ docId: src.docId, page: src.page, y: Number.isFinite(top) ? top : 0, cardId });
   return true;
+}
+
+/** Adds an answer card to a card (undoable). Returns the answer's id. */
+export function addAnswer(cardId: string, init: Omit<AnswerCard, 'id' | 'createdAt'>): string {
+  const nb = useNotebook.getState();
+  const card = nb.nb?.cards[cardId];
+  if (!card) return '';
+  const answer: AnswerCard = { id: uid(), createdAt: Date.now(), ...init };
+  nb.updateCard(cardId, { answers: [...(card.answers ?? []), answer] });
+  return answer.id;
+}
+
+export function updateAnswer(cardId: string, answerId: string, patch: Partial<Omit<AnswerCard, 'id'>>) {
+  const nb = useNotebook.getState();
+  const card = nb.nb?.cards[cardId];
+  if (!card?.answers) return;
+  nb.updateCard(cardId, { answers: card.answers.map((a) => (a.id === answerId ? { ...a, ...patch } : a)) });
+}
+
+export function removeAnswer(cardId: string, answerId: string) {
+  const nb = useNotebook.getState();
+  const card = nb.nb?.cards[cardId];
+  if (!card?.answers) return;
+  const answers = card.answers.filter((a) => a.id !== answerId);
+  nb.updateCard(cardId, { answers: answers.length ? answers : undefined });
+}
+
+/** Menu entry that opens a card's answers (or starts its first one). */
+export function answersMenuItem(card: Card): MenuItem {
+  const n = card.answers?.length ?? 0;
+  return n
+    ? { label: `Answers (${n})…`, onClick: () => useUi.getState().openAnswers(card.id) }
+    : { label: 'Add answer…', onClick: () => useUi.getState().openAnswers(card.id, true) };
 }
 
 function colorRow(current: ColorKey | null, onPick: (c: ColorKey) => void): MenuItem {
@@ -176,6 +213,7 @@ export function openCardMenu(x: number, y: number, id: string, extra: MenuItem[]
     { label: 'Add child card', shortcut: 'Tab', onClick: () => addChild(id) },
     { label: 'Add sibling card', shortcut: 'Enter', onClick: () => addSibling(id) },
     { label: 'Edit title', shortcut: 'F2', onClick: () => useNotebook.getState().setEditing(id) },
+    answersMenuItem(card),
     colorRow(card.color, (c) => useNotebook.getState().updateCard(id, { color: c })),
     { separator: true },
     {

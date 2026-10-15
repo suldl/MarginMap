@@ -12,16 +12,18 @@ import { MathPreview, useLatexAssist } from './LatexAssist';
 import { useUi } from '../store/ui';
 
 /** Auto-growing textarea with LaTeX autocomplete and a formula preview. */
-function MathTextarea({
+export function MathTextarea({
   value,
   onChange,
   placeholder,
   minRows = 2,
+  autoFocus,
 }: {
   value: string;
   onChange(next: string): void;
   placeholder?: string;
   minRows?: number;
+  autoFocus?: boolean;
 }) {
   const assist = useLatexAssist<HTMLTextAreaElement>(value, onChange);
   const ref = assist.ref;
@@ -38,6 +40,7 @@ function MathTextarea({
         className="textarea"
         value={value}
         placeholder={placeholder}
+        autoFocus={autoFocus}
         style={{ resize: 'none', overflow: 'hidden' }}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => assist.onKeyDown(e)}
@@ -146,6 +149,7 @@ function CardDetails({ card, childCount }: { card: Card; childCount: number }) {
   const imageUrl = useAssetUrl(card.imageId);
   const doc = useLibrary((s) => (card.source ? s.docs.find((d) => d.id === card.source!.docId) : undefined));
   const [tagDraft, setTagDraft] = useState('');
+  const answerCount = card.answers?.length ?? 0;
 
   const addTag = () => {
     const t = tagDraft.trim().replace(/^#/, '');
@@ -224,6 +228,24 @@ function CardDetails({ card, childCount }: { card: Card; childCount: number }) {
 
         <div className="field">
           <label>
+            <Icon name="answer" size={13} /> Answers
+          </label>
+          <div className="answers-field">
+            <span className="muted">{answerCount ? `${answerCount} answer card${answerCount === 1 ? '' : 's'}` : 'None yet'}</span>
+            <div style={{ flex: 1 }} />
+            {answerCount > 0 && (
+              <button className="btn outline" onClick={() => useUi.getState().openAnswers(card.id)}>
+                Show
+              </button>
+            )}
+            <button className="btn outline" onClick={() => useUi.getState().openAnswers(card.id, true)}>
+              <Icon name="plus" size={14} /> Add
+            </button>
+          </div>
+        </div>
+
+        <div className="field">
+          <label>
             <Icon name="tag" size={13} /> Tags
           </label>
           <div className="tags input" style={{ height: 'auto', minHeight: 32, padding: '3px 6px' }}>
@@ -261,7 +283,7 @@ function CardDetails({ card, childCount }: { card: Card; childCount: number }) {
               <div className="muted" style={{ fontSize: 12 }}>
                 {card.review
                   ? `Next review ${relativeDue(card.review.due)} · ${card.review.reps} review${card.review.reps === 1 ? '' : 's'}`
-                  : 'Front: title · Back: excerpt, notes and child cards'}
+                  : 'Front: title · Back: excerpt, notes, answers and child cards'}
               </div>
             </div>
             <button

@@ -7,7 +7,7 @@ import { useStudy } from '../../store/study';
 import { gridSpacing, useSettings } from '../../store/settings';
 import { useUi } from '../../store/ui';
 import { COLORS, type ArrowEnd, type BoardCardItem, type BoardItem, type BoardText, type InkColor } from '../../types';
-import { deleteWithUndoHint, groupSelection, locateCard, openGroupMenu, renameGroup } from '../cardActions';
+import { answersMenuItem, deleteWithUndoHint, groupSelection, locateCard, openGroupMenu, renameGroup } from '../cardActions';
 import { CardPreview, canEnlarge } from '../CardPreview';
 import { Icon, type IconName } from '../Icon';
 import { useLatexAssist } from '../LatexAssist';
@@ -855,6 +855,7 @@ export function Whiteboard() {
       ui.openMenu(e.clientX, e.clientY, [
         ...(selCardIds.length > 1 ? [{ header: `${ids.length} items selected` }] : []),
         { label: 'Edit title', shortcut: picture && enlarge ? undefined : 'Double-click', onClick: () => store.setEditing(card.id) },
+        answersMenuItem(card),
         ...(picture
           ? [{ label: 'Enlarge', shortcut: enlarge ? 'Double-click' : undefined, onClick: () => setPreview({ cardId: card.id, itemId: hit.id }) }]
           : []),

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { backend } from '../../backend';
 import { canvasToBlob, loadPdf, type PDFDocumentProxy } from '../../lib/pdf';
+import { cardLabel } from '../../lib/tree';
 import { clamp, debounce, uid } from '../../lib/util';
 import { useLibrary } from '../../store/library';
 import { useNotebook } from '../../store/notebook';
@@ -8,6 +9,7 @@ import { loadReadingPos, saveReadingPos, useStudy } from '../../store/study';
 import { useUi } from '../../store/ui';
 import { COLORS, type ColorKey, type PageRect } from '../../types';
 import { Icon } from '../Icon';
+import { addAnswer } from '../cardActions';
 import { defaultSpot, isWhiteboardActive } from '../whiteboard/boardActions';
 import { PageView, type PageHighlight } from './PageView';
 import { ReaderSidebar } from './ReaderSidebar';
@@ -31,6 +33,13 @@ interface PageSize {
  * mounted later (e.g. after switching layouts) does not replay an old jump.
  */
 const handledJump = { nonce: 0 };
+
+/** Tells where a new answer went, with a button to see it. */
+function answerAdded(cardId: string) {
+  const card = useNotebook.getState().nb?.cards[cardId];
+  const label = card ? cardLabel(card, 40) : 'the card';
+  useUi.getState().toast(`Added as an answer of “${label}”`, 'info', { label: 'Show', run: () => useUi.getState().openAnswers(cardId) });
+}
 
 /** Index of the last page whose top is at or above y. */
 function pageAt(tops: number[], y: number) {
@@ -376,9 +385,25 @@ function DocReader({ notebookId, docId }: { notebookId: string; docId: string })
     setSelBar(null);
   };
 
+  /** Adds the selected text as an answer card of the selected card. */
+  const excerptAnswer = () => {
+    const cardId = useNotebook.getState().selectedId;
+    if (!selBar || !cardId) return;
+    addAnswer(cardId, { text: selBar.text, source: { docId, page: selBar.page, kind: 'text', rects: selBar.rects } });
+    answerAdded(cardId);
+    window.getSelection()?.removeAllRanges();
+    setSelBar(null);
+  };
+
   const onArea = useCallback(
-    async (pageNum: number, rect: { x: number; y: number; w: number; h: number }, pageEl: HTMLElement) => {
+    async (pageNum: number, rect: { x: number; y: number; w: number; h: number }, pageEl: HTMLElement, asAnswer: boolean) => {
       if (!pdf) return;
+      // Alt: a picture answer for the selected card instead of a new card.
+      const answerTo = asAnswer ? useNotebook.getState().selectedId : null;
+      if (asAnswer && !answerTo) {
+        useUi.getState().toast('Select a card first to add a picture answer to it');
+        return;
+      }
       try {
         const pg = await pdf.getPage(pageNum);
         const base = pg.getViewport({ scale: 1 });
@@ -393,13 +418,19 @@ function DocReader({ notebookId, docId }: { notebookId: string; docId: string })
         await pg.render({ canvas, canvasContext: ctx, viewport }).promise;
         const imageId = uid();
         await backend.putAsset(imageId, await canvasToBlob(canvas));
+        const source = { docId, page: pageNum, kind: 'area' as const, rects: [{ page: pageNum, ...rect }] };
+        if (answerTo) {
+          addAnswer(answerTo, { text: '', imageId, source });
+          answerAdded(answerTo);
+          return;
+        }
         const nb = useNotebook.getState();
         const id = nb.addCard(
           {
             imageId,
             imageText: textInArea(pageEl, rect),
             color: useStudy.getState().color,
-            source: { docId, page: pageNum, kind: 'area', rects: [{ page: pageNum, ...rect }] },
+            source,
           },
           { parentId: nb.selectedId },
           { select: false, boardAt: isWhiteboardActive() ? defaultSpot() : undefined },
@@ -484,7 +515,7 @@ function DocReader({ notebookId, docId }: { notebookId: string; docId: string })
           <button className={`btn icon ${tool === 'text' ? 'on' : ''}`} title="Select text to excerpt" onClick={() => setStudy({ tool: 'text' })}>
             <Icon name="text" />
           </button>
-          <button className={`btn icon ${tool === 'area' ? 'on' : ''}`} title="Area excerpt — drag a box over figures, formulas, tables" onClick={() => setStudy({ tool: 'area' })}>
+          <button className={`btn icon ${tool === 'area' ? 'on' : ''}`} title="Area excerpt — drag a box over figures, formulas, tables (hold Alt: picture answer for the selected card)" onClick={() => setStudy({ tool: 'area' })}>
             <Icon name="area" />
           </button>
         </div>
@@ -575,7 +606,7 @@ function DocReader({ notebookId, docId }: { notebookId: string; docId: string })
               ))}
 
               {selBar && (
-                <div className="float-toolbar" style={{ left: clampX(selBar.anchor.x, 380), top: selBar.anchor.y }} onMouseDown={(e) => e.preventDefault()}>
+                <div className="float-toolbar" style={{ left: clampX(selBar.anchor.x, 480), top: selBar.anchor.y }} onMouseDown={(e) => e.preventDefault()}>
                   <span className="muted" style={{ fontSize: 12, padding: '0 4px' }}>
                     Excerpt
                   </span>
@@ -591,6 +622,14 @@ function DocReader({ notebookId, docId }: { notebookId: string; docId: string })
                     ))}
                   </div>
                   <div className="divider-v" />
+                  <button
+                    className="btn"
+                    disabled={!selectedId}
+                    title={selectedId ? 'Add as an answer of the selected card' : 'Select a card first to add this as its answer'}
+                    onClick={excerptAnswer}
+                  >
+                    <Icon name="answer" size={15} /> Answer
+                  </button>
                   <button
                     className="btn"
                     onClick={() => {

@@ -153,6 +153,7 @@ const paths = {
     </>
   ),
   enlarge: <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />,
+  answer: <path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.6 10.8c.7.5 1.1 1.3 1.1 2.2h5c0-.9.4-1.7 1.1-2.2A6 6 0 0012 3z" />,
   whiteboard: (
     <>
       <rect x="3" y="3" width="18" height="13" rx="2" />

@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { useAssetUrl } from '../hooks/useAssetUrl';
 import { useNotebook } from '../store/notebook';
 import type { Card } from '../types';
+import { AnswerBadge } from './Answers';
 import { addChild, addSibling, locateCard } from './cardActions';
 import { Icon } from './Icon';
 import { useLatexAssist } from './LatexAssist';
@@ -35,8 +36,9 @@ export function CardBody({ card, editing, structural = true }: { card: Card; edi
           <MathText text={card.comment.trim()} />
         </div>
       )}
-      {(card.source || card.review || card.tags.length > 0) && (
+      {(card.source || card.review || card.tags.length > 0 || !!card.answers?.length) && (
         <div className="card-foot">
+          <AnswerBadge card={card} />
           <SourceBadge card={card} />
           {card.review && (
             <span className="badge" title="In review">

@@ -1763,6 +1763,154 @@ select {
 }
 
 /* ------------------------------------------------------------------ */
+/* Answer cards                                                       */
+/* ------------------------------------------------------------------ */
+
+.answer-badge {
+  border: none;
+  font-family: inherit;
+  line-height: inherit;
+  cursor: pointer;
+  font-weight: 600;
+}
+.answer-badge:hover {
+  background: var(--accent-soft) !important;
+  color: var(--accent);
+}
+.answers-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+}
+.answers-field .btn {
+  height: 28px;
+}
+.modal.answers-window {
+  width: min(640px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  padding: 0;
+  gap: 0;
+  outline: none;
+  overflow: hidden;
+}
+.answers-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 12px 12px 18px;
+  border-bottom: 1px solid var(--border);
+  color: var(--accent);
+}
+.answers-head h3 {
+  color: var(--text);
+}
+.answers-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  line-height: 1.55;
+}
+.answer-question,
+.answer-card {
+  border-radius: 10px;
+  padding: 10px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.answer-question {
+  background: color-mix(in srgb, var(--cc) 14%, var(--panel));
+  border: 1.5px solid color-mix(in srgb, var(--cc) 55%, var(--panel));
+}
+.answer-card {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-left: 4px solid color-mix(in srgb, var(--c-green) 70%, var(--panel));
+}
+.answer-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+}
+.answer-label .badge {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+  max-width: 70%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.answer-label .btn.icon {
+  width: 26px;
+  height: 26px;
+}
+.answer-q-title {
+  font-size: 16px;
+  font-weight: 650;
+  white-space: pre-wrap;
+}
+.answer-q-excerpt,
+.answer-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.answer-q-title + .answer-q-excerpt {
+  color: var(--text-2);
+}
+.answer-text {
+  font-size: 14px;
+}
+.answer-image {
+  display: block;
+  max-width: 100%;
+  max-height: 45vh;
+  object-fit: contain;
+  align-self: flex-start;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: white;
+}
+.answer-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.answer-edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.answers-empty {
+  font-size: 13px;
+  padding: 4px 2px;
+}
+.answers-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+}
+.review-answers {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 4px 0 12px;
+}
+
+/* ------------------------------------------------------------------ */
 /* Enlarged card view                                                 */
 /* ------------------------------------------------------------------ */
 

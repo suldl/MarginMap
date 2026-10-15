@@ -3,6 +3,7 @@ import { buildTree, childrenOf, flatten } from '../lib/tree';
 import { groupsOf, useNotebook } from '../store/notebook';
 import { useStudy } from '../store/study';
 import type { Card } from '../types';
+import { AnswerBadge } from './Answers';
 import { SourceBadge } from './CardBody';
 import { addChild, addSibling, deleteWithUndoHint, groupSelection, locateCard, openCardMenu } from './cardActions';
 import { Icon } from './Icon';
@@ -277,6 +278,7 @@ export function Outline() {
                 <Icon name="cards" size={11} />
               </span>
             )}
+            <AnswerBadge card={card} />
             <SourceBadge card={card} />
           </div>
         );

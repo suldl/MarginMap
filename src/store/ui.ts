@@ -51,6 +51,8 @@ interface UiState {
   menu: { x: number; y: number; items: MenuItem[] } | null;
   /** Open settings section, or null when the settings window is closed. */
   settings: SettingsSection | null;
+  /** The card whose answers window is open (`add`: start with a new answer). */
+  answers: { cardId: string; add?: boolean } | null;
   navigate(route: Route): void;
   toast(text: string, kind?: Toast['kind'], action?: Toast['action']): void;
   dismissToast(id: number): void;
@@ -61,6 +63,8 @@ interface UiState {
   closeMenu(): void;
   openSettings(section?: SettingsSection): void;
   closeSettings(): void;
+  openAnswers(cardId: string, add?: boolean): void;
+  closeAnswers(): void;
 }
 
 let toastSeq = 0;
@@ -71,7 +75,8 @@ export const useUi = create<UiState>((set, get) => ({
   dialog: null,
   menu: null,
   settings: null,
-  navigate: (route) => set({ route, menu: null }),
+  answers: null,
+  navigate: (route) => set({ route, menu: null, answers: null }),
   toast(text, kind = 'info', action) {
     const id = ++toastSeq;
     set({ toasts: [...get().toasts, { id, text, kind, action }] });
@@ -85,4 +90,6 @@ export const useUi = create<UiState>((set, get) => ({
   closeMenu: () => set({ menu: null }),
   openSettings: (section = 'appearance') => set({ settings: section, menu: null }),
   closeSettings: () => set({ settings: null }),
+  openAnswers: (cardId, add) => set({ answers: { cardId, add }, menu: null }),
+  closeAnswers: () => set({ answers: null }),
 }));

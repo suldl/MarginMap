@@ -22,7 +22,8 @@ interface Props {
   flash: { cardId: string; nonce: number } | null;
   searchQuery: string;
   areaMode: boolean;
-  onArea(pageNum: number, rect: { x: number; y: number; w: number; h: number }, pageEl: HTMLElement): void;
+  /** `asAnswer`: Alt was held — the picture becomes an answer of the selected card. */
+  onArea(pageNum: number, rect: { x: number; y: number; w: number; h: number }, pageEl: HTMLElement, asAnswer: boolean): void;
 }
 
 const MAX_CANVAS_PIXELS = 16_000_000;
@@ -195,6 +196,7 @@ function AreaOverlay({
             pageNum,
             { x: box.left / r.width, y: box.top / r.height, w: box.width / r.width, h: box.height / r.height },
             rootRef.current,
+            e.altKey,
           );
         }
         setDrag(null);

@@ -86,7 +86,7 @@ export function cardLabel(c: Card, max = 80): string {
 
 export function matchesQuery(c: Card, q: string): boolean {
   const needle = q.toLowerCase();
-  return [c.title, c.excerpt, c.comment, c.imageText ?? '', c.tags.join(' ')].some((s) =>
+  return [c.title, c.excerpt, c.comment, c.imageText ?? '', c.tags.join(' '), ...(c.answers ?? []).map((a) => a.text)].some((s) =>
     s.toLowerCase().includes(needle),
   );
 }

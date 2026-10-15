@@ -8,6 +8,7 @@ import { notebookMeta, useLibrary } from '../store/library';
 import { waitForSaves } from '../store/notebook';
 import { useUi } from '../store/ui';
 import type { Card, Notebook } from '../types';
+import { AnswerBody } from './Answers';
 import { Icon } from './Icon';
 import { MathText } from './MathText';
 import { TitleBar } from './TitleBar';
@@ -197,8 +198,9 @@ function Flashcard({ card, nb, revealed, docTitle }: { card: Card; nb: Notebook;
   const imageUrl = useAssetUrl(card.imageId);
   const children = buildTree(nb.cards).children.get(card.id) ?? [];
   const parent = card.parentId ? nb.cards[card.parentId] : null;
+  const answers = card.answers ?? [];
   const title = card.title.trim();
-  // Without a title the excerpt (or image) becomes the prompt, and notes/children are the answer.
+  // Without a title the excerpt (or image) becomes the prompt, and notes/answers/children are the answer.
   const frontIsExcerpt = !title;
 
   return (
@@ -243,6 +245,18 @@ function Flashcard({ card, nb, revealed, docTitle }: { card: Card; nb: Notebook;
                 <MathText text={card.comment.trim()} />
               </div>
             )}
+            {answers.length > 0 && (
+              <div className="review-answers">
+                {answers.map((a, i) => (
+                  <div key={a.id} className="answer-card">
+                    <div className="answer-label">
+                      <span>Answer {answers.length > 1 ? i + 1 : ''}</span>
+                    </div>
+                    <AnswerBody answer={a} />
+                  </div>
+                ))}
+              </div>
+            )}
             {children.length > 0 && (
               <ul className="children">
                 {children.map((c) => (
@@ -252,7 +266,7 @@ function Flashcard({ card, nb, revealed, docTitle }: { card: Card; nb: Notebook;
                 ))}
               </ul>
             )}
-            {!card.comment.trim() && !children.length && (frontIsExcerpt || (!card.excerpt.trim() && !imageUrl)) && (
+            {!card.comment.trim() && !children.length && !answers.length && (frontIsExcerpt || (!card.excerpt.trim() && !imageUrl)) && (
               <div className="muted">No notes on this card yet — add some in the card panel to make a better answer.</div>
             )}
           </div>

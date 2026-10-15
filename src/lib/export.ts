@@ -1,5 +1,5 @@
 import { backend } from '../backend';
-import type { Card, DocMeta, Notebook } from '../types';
+import type { AnswerCard, Card, DocMeta, Notebook } from '../types';
 import { buildTree } from './tree';
 
 export type ExportFormat = 'markdown' | 'opml' | 'json';
@@ -10,6 +10,11 @@ function docName(docs: DocMeta[], id: string | undefined) {
 
 function sourceLabel(c: Card, docs: DocMeta[]) {
   return c.source ? `${docName(docs, c.source.docId)}, p. ${c.source.page}` : '';
+}
+
+function answerText(a: AnswerCard, docs: DocMeta[]) {
+  const text = a.text.trim().replace(/\n+/g, ' ') || (a.imageId ? '(picture)' : '');
+  return a.source ? `${text} — ${docName(docs, a.source.docId)}, p. ${a.source.page}` : text;
 }
 
 export function toMarkdown(nb: Notebook, docs: DocMeta[]): string {
@@ -31,6 +36,7 @@ export function toMarkdown(nb: Notebook, docs: DocMeta[]): string {
         lines.push('');
         for (const l of c.comment.trim().split('\n')) lines.push(`${inner}${l}`);
       }
+      for (const a of c.answers ?? []) lines.push(`${inner}**Answer:** ${answerText(a, docs)}`);
       if (c.tags.length) lines.push(`${inner}${c.tags.map((t) => `#${t.replace(/\s+/g, '_')}`).join(' ')}`);
       walk(tree.children.get(c.id) ?? [], depth + 1);
     }
@@ -54,7 +60,8 @@ export function toOpml(nb: Notebook, docs: DocMeta[]): string {
     for (const c of list) {
       const pad = '    ' + '  '.repeat(depth);
       const text = c.title.trim() || c.excerpt.trim() || (c.imageId ? 'Image excerpt' : 'Untitled');
-      const note = [c.title.trim() ? c.excerpt.trim() : '', c.comment.trim(), sourceLabel(c, docs)].filter(Boolean).join('\n\n');
+      const answers = (c.answers ?? []).map((a) => `Answer: ${answerText(a, docs)}`).join('\n');
+      const note = [c.title.trim() ? c.excerpt.trim() : '', c.comment.trim(), answers, sourceLabel(c, docs)].filter(Boolean).join('\n\n');
       const kids = tree.children.get(c.id) ?? [];
       const attrs = `text="${xml(text)}"${note ? ` _note="${xml(note)}"` : ''}`;
       if (kids.length) {

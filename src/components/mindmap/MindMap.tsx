@@ -50,7 +50,7 @@ interface Marquee {
   base: string[];
 }
 
-type StatusKey = 'review' | 'due' | 'notes' | 'image' | 'free';
+type StatusKey = 'review' | 'due' | 'notes' | 'answers' | 'image' | 'free';
 
 interface Filter {
   colors: ColorKey[];
@@ -64,6 +64,7 @@ const STATUS: { key: StatusKey; label: string }[] = [
   { key: 'review', label: 'In review' },
   { key: 'due', label: 'Due' },
   { key: 'notes', label: 'Has notes' },
+  { key: 'answers', label: 'Has answers' },
   { key: 'image', label: 'Image excerpt' },
   { key: 'free', label: 'Placed freely' },
 ];
@@ -78,6 +79,8 @@ function hasStatus(c: Card, s: StatusKey, now: number) {
       return !!c.review && c.review.due <= now;
     case 'notes':
       return !!c.comment.trim();
+    case 'answers':
+      return !!c.answers?.length;
     case 'image':
       return !!c.imageId;
     case 'free':
