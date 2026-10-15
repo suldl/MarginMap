@@ -104,22 +104,6 @@ assets\<id>.png       area-excerpt images and thumbnails
 
 Set `MARGINMAP_DATA_DIR` to use a different folder (portable use, testing). Settings → Data → *Open* shows the folder in Explorer.
 
-## Releasing on GitHub
-
-Releases are built and uploaded by GitHub Actions ([`.github/workflows/release.yml`](.github/workflows/release.yml)).
-
-**One-time setup**
-
-1. Create a public GitHub repository and push this project to it:
-   ```bash
-   git remote add origin https://github.com/<you>/marginmap.git
-   git push -u origin main
-   ```
-2. In `package.json`, replace `OWNER` (in `repository` and in `build.publish`) with your GitHub user or organization,
-   and `marginmap` with the repository name if it differs. Commit and push.
-   *(That setting is also what installed copies use to look for updates.)*
-
-
 ## Architecture
 
 ```
