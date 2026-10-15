@@ -35,7 +35,7 @@ export function createWebBackend(): Backend {
     onOpenFiles: () => () => {},
     setTitleBar() {},
     setZoom() {},
-    appInfo: async () => ({ version: __APP_VERSION__, dataDir: null, updateSource: null, updateMode: 'none' }),
+    appInfo: async () => ({ version: __APP_VERSION__, updateSource: null, updateMode: 'none' }),
     checkForUpdates: async () => ({ status: 'unsupported', current: __APP_VERSION__ }),
     downloadUpdate: async () => {},
     installUpdate: async () => {},

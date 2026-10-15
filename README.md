@@ -94,7 +94,7 @@ notebooks\<id>.json   cards, mind map, whiteboard and review state
 assets\<id>.png       area-excerpt images and thumbnails
 ```
 
-Set `MARGINMAP_DATA_DIR` to use a different folder (portable use, testing). Settings → About → *Open* shows the folder in Explorer.
+Set `MARGINMAP_DATA_DIR` to use a different folder (portable use, testing). Settings → Data → *Open* shows the folder in Explorer.
 
 ## Releasing on GitHub
 

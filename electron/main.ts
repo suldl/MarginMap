@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import pkg from '../package.json';
 import { canAutoUpdate, checkAuto, downloadAuto, installAuto } from './autoUpdate';
-import { changeDataDir, dataDir, dataDirLocation, dataStatus, initDataDir, isDataDirBusy, pickDataDir, trackWrite } from './dataDir';
+import { changeDataDir, dataDir, dataStatus, initDataDir, isDataDirBusy, pickDataDir, trackWrite } from './dataDir';
 import { checkForUpdates, describeFeed, resolveFeed } from './updates';
 import type { DataChangeMode } from '../src/backend';
 
@@ -132,7 +132,6 @@ function registerIpc() {
 
   ipcMain.handle('app:info', () => ({
     version: app.getVersion(),
-    dataDir: dataDirLocation(),
     electron: process.versions.electron,
     chrome: process.versions.chrome,
     updateSource: process.env.MARGINMAP_UPDATE_GENERIC && canAutoUpdate(false) ? process.env.MARGINMAP_UPDATE_GENERIC : describeFeed(updateFeed()),

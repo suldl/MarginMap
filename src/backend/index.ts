@@ -15,8 +15,6 @@ export interface FileFilter {
 
 export interface AppInfo {
   version: string;
-  /** Where the library lives on disk (Electron only). */
-  dataDir: string | null;
   electron?: string;
   chrome?: string;
   /** Where update checks look, or null when this build has no update source configured. */

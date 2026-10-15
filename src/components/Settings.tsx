@@ -500,7 +500,6 @@ function ShortcutsPage() {
 }
 
 function AboutPage() {
-  const open = useUi((s) => s.openSettings);
   const [info, setInfo] = useState<AppInfo | null>(null);
   useEffect(() => {
     void backend.appInfo().then(setInfo);
@@ -515,13 +514,6 @@ function AboutPage() {
       {info?.electron && (
         <Row title="Runtime">
           Electron {info.electron} · Chromium {info.chrome?.split('.')[0]}
-        </Row>
-      )}
-      {info?.dataDir && (
-        <Row title="Data folder" hint={<span className="data-path">{info.dataDir}</span>}>
-          <button className="btn outline" onClick={() => open('data')}>
-            Change…
-          </button>
         </Row>
       )}
       <Row title="License">MIT</Row>

@@ -53,7 +53,6 @@ export function dataDir(): string {
   return current;
 }
 
-export const dataDirLocation = () => current;
 export const isDataDirBusy = () => busy;
 
 /** Registers a storage write so a move waits for it to finish. */
