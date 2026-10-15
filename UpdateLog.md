@@ -62,3 +62,10 @@ Status: all items done in v0.5.0 (2026-10-14). `npm run test:e2e` covers each of
 5. Excerpt a whiteboard area then convert it into a card.
 6. A number of "answer" card can be added to a card. When I click "answer", it will display a pop-up window to show the card and "answer" card.
 7. User can edit and note in document.
+
+## v0.7.0 -> v0.7.1
+
+1. Area excerpt card don't display the deshed box.
+2. Text and picture excerpt in document cancel color filling.
+3. Text, picture and area card convert to answer card after they are dragged in another card with holding down Alt.
+4. Double-click to enlarge to nearly full screen.
