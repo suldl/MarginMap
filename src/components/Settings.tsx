@@ -188,7 +188,7 @@ function MapsPage() {
       </Row>
       <Row
         title="Enlarge picture cards on double-click"
-        hint="Double-click a picture excerpt to see it big, with its notes. Double-clicking a text card (or any card while this is off) edits its title."
+        hint="Double-click a picture excerpt to see it nearly full screen, with its notes. Double-clicking a text card (or any card while this is off) edits its title."
       >
         <Switch on={enlarge} label="Enlarge picture cards on double-click" onChange={(v) => useStudy.getState().set({ enlarge: v })} />
       </Row>

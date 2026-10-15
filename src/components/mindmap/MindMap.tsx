@@ -986,18 +986,7 @@ export function MindMap() {
         </span>
       </div>
 
-      {preview && cards[preview] && layout.nodes.get(preview) && (
-        <CardPreview
-          card={cards[preview]}
-          anchor={{
-            left: layout.nodes.get(preview)!.x * view.k + view.x,
-            top: layout.nodes.get(preview)!.y * view.k + view.y,
-            width: layout.nodes.get(preview)!.w * view.k,
-          }}
-          bounds={{ w: vpSize.w || vpRef.current?.clientWidth || 600, h: vpSize.h || vpRef.current?.clientHeight || 600 }}
-          onClose={() => setPreview(null)}
-        />
-      )}
+      {preview && cards[preview] && <CardPreview card={cards[preview]} onClose={() => setPreview(null)} />}
 
       <div className="map-hud" onPointerDown={(e) => e.stopPropagation()}>
         {selectedIds.length > 1 && (

@@ -1167,16 +1167,7 @@ export function Whiteboard() {
       )}
 
       {previewCard && previewItem && (
-        <CardPreview
-          card={previewCard}
-          anchor={{
-            left: previewItem.type === 'card' ? previewItem.x * view.k + view.x : 0,
-            top: previewItem.type === 'card' ? previewItem.y * view.k + view.y : 0,
-            width: previewItem.type === 'card' ? previewItem.w * view.k : 300,
-          }}
-          bounds={{ w: vpSize.w || vpRef.current?.clientWidth || 600, h: vpSize.h || vpRef.current?.clientHeight || 600 }}
-          onClose={() => setPreview(null)}
-        />
+        <CardPreview card={previewCard} onClose={() => setPreview(null)} />
       )}
 
       <div className="map-hint" style={vpSize.w && vpSize.w < 1000 ? { display: 'none' } : undefined}>

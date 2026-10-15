@@ -1110,9 +1110,7 @@ select {
   -webkit-user-select: none;
 }
 .mindmap input,
-.mindmap textarea,
-.mindmap .card-preview,
-.mindmap .card-preview * {
+.mindmap textarea {
   user-select: text;
   -webkit-user-select: text;
 }
@@ -2079,9 +2077,25 @@ select {
 /* Enlarged card view                                                 */
 /* ------------------------------------------------------------------ */
 
+/* Covers the window below the title bar (so the window buttons stay clear). */
+.card-preview-backdrop {
+  position: fixed;
+  top: var(--titlebar-h);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 24px 24px;
+  background: rgba(10, 10, 20, 0.45);
+  animation: fade-in 0.12s ease-out;
+}
 .card-preview {
-  position: absolute;
-  z-index: 30;
+  width: 100%;
+  max-width: 1800px;
+  height: 100%;
   display: flex;
   flex-direction: column;
   background: var(--panel);
@@ -2091,8 +2105,8 @@ select {
   box-shadow: var(--shadow-lg);
   overflow: hidden;
   cursor: auto;
+  user-select: text;
   animation: preview-in 0.14s ease-out;
-  transform-origin: top left;
 }
 @keyframes preview-in {
   from {
@@ -2120,36 +2134,41 @@ select {
   white-space: nowrap;
 }
 .card-preview-body {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
-  padding: 14px 18px 18px;
+  padding: 16px 22px 22px;
   display: flex;
   flex-direction: column;
   gap: 12px;
   line-height: 1.6;
 }
 .card-preview-title {
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 650;
   line-height: 1.35;
   white-space: pre-wrap;
 }
 .card-preview-excerpt {
-  font-size: 15px;
+  font-size: 17px;
   white-space: pre-wrap;
   padding: 8px 12px;
   border-left: 3px solid var(--cc);
   background: color-mix(in srgb, var(--cc) 10%, transparent);
   border-radius: 0 6px 6px 0;
 }
+/* The picture takes all the room the text leaves (at least about half the window). */
+.card-preview-figure {
+  flex: 1 1 0;
+  min-height: max(240px, 45vh);
+  position: relative;
+}
 .card-preview-image {
-  display: block;
-  max-width: 100%;
-  max-height: 60vh;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: white;
-  align-self: flex-start;
 }
 .card-preview-notes {
   white-space: pre-wrap;
