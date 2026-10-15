@@ -65,7 +65,6 @@ Status: all items done in v0.5.0 (2026-10-14). `npm run test:e2e` covers each of
 
 ## v0.7.0 -> v0.7.1
 
-1. Area excerpt card don't display the deshed box.
-2. Text and picture excerpt in document cancel color filling.
-3. Text, picture and area card convert to answer card after they are dragged in another card with holding down Alt.
-4. Double-click to enlarge to nearly full screen.
+1. Text and picture excerpt in document cancel color filling.
+2. Text, picture and area card convert to answer card after they are dragged in another card with holding down Alt.
+3. Double-click to enlarge to nearly full screen.
