@@ -123,6 +123,19 @@ function registerIpc() {
     return files;
   });
 
+  // Whiteboard area excerpts: a PNG of part of the window, as drawn (rect in CSS pixels).
+  ipcMain.handle('page:capture', async (e, rect: { x: number; y: number; width: number; height: number }) => {
+    const z = e.sender.getZoomFactor();
+    const n = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+    const img = await e.sender.capturePage({
+      x: Math.round(n(rect?.x) * z),
+      y: Math.round(n(rect?.y) * z),
+      width: Math.max(1, Math.round(n(rect?.width) * z)),
+      height: Math.max(1, Math.round(n(rect?.height) * z)),
+    });
+    return new Uint8Array(img.toPNG());
+  });
+
   ipcMain.handle('titlebar:set', (e, color: string, symbolColor: string, height?: number) => {
     const win = BrowserWindow.fromWebContents(e.sender);
     // The overlay height follows the interface zoom so the window buttons line up with the title bar.

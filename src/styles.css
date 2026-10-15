@@ -1918,6 +1918,19 @@ select {
   border-radius: 2px;
   pointer-events: none;
 }
+/* Area excerpt box; while the picture is taken the board hides its controls, selection and grid. */
+.wb-capture {
+  position: absolute;
+  border: 2px dashed var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  pointer-events: none;
+}
+.whiteboard.capturing {
+  background-image: none !important;
+}
+.whiteboard.capturing :is(.wb-tools, .wb-style, .map-hud, .map-hint, .wb-tray, .wb-sel, .wb-handle, .wb-capture, .card-preview, .wb-eraser-cursor) {
+  visibility: hidden;
+}
 .wb-marquee {
   position: absolute;
   border: 1px solid var(--accent);

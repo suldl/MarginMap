@@ -26,6 +26,7 @@ const api = {
       ipcRenderer.removeListener('open:files', handler);
     };
   },
+  capturePage: (rect: { x: number; y: number; width: number; height: number }): Promise<Uint8Array> => ipcRenderer.invoke('page:capture', rect),
   setTitleBar: (color: string, symbolColor: string, height: number) => ipcRenderer.invoke('titlebar:set', color, symbolColor, height),
   setZoom: (factor: number) => {
     if (Number.isFinite(factor) && factor >= 0.5 && factor <= 2) webFrame.setZoomFactor(factor);

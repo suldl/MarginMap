@@ -33,6 +33,7 @@ export function createWebBackend(): Backend {
     },
     takeOpenFiles: async () => [],
     onOpenFiles: () => () => {},
+    capturePage: async () => null,
     setTitleBar() {},
     setZoom() {},
     appInfo: async () => ({ version: __APP_VERSION__, updateSource: null, updateMode: 'none' }),

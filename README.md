@@ -19,7 +19,7 @@ A MarginNote-style study app for Windows. It covers the core MarginNote workflow
 | **Selection & groups** | Drag a selection box over cards, Ctrl/Shift+click to add, Ctrl+A for all. Move, recolor, tag, review or delete them together. **Ctrl+G** groups them into a named, colored frame (also shown on the whiteboard) |
 | **Classify & filter** | Filter the map by color, tag, group or status (in review, due, has notes, image, placed freely) and select every match; tag several cards at once |
 | **Formulas** | LaTeX in titles, excerpts, notes and whiteboard text — `$…$` inline, `$$…$$` display — rendered with KaTeX. Typing `\` suggests commands with live previews; Tab jumps between the `{}` slots of `\frac{}{}` and friends |
-| **Whiteboard** | A free canvas per notebook: drag cards anywhere, draw with pen and highlighter, add rectangles, ellipses, text and arrows that stay connected to cards as you move them. **E** toggles pen ⇄ eraser; works with pen tablets (the eraser end of a pen erases too) |
+| **Whiteboard** | A free canvas per notebook: drag cards anywhere, draw with pen and highlighter, add rectangles, ellipses, text and arrows that stay connected to cards as you move them. **E** toggles pen ⇄ eraser; works with pen tablets (the eraser end of a pen erases too). The **area excerpt** tool (`C`) turns a box of the board — sketches, text, cards — into a new picture card (desktop app) |
 | **Two-way links** | Clicking a card only selects it; click its page tag (*p.3*), press `Space` or choose *Locate in document* → the document jumps to the excerpt and flashes it. Click a highlight in the PDF → its card is selected in the map |
 | **Outline** | The same cards as an indented outline (the outline button next to the pane switches), with drag & drop and Tab / Shift+Tab indent/outdent |
 | **Card panel** | Title, color, editable excerpt, notes, tags, source link, review toggle |
@@ -77,7 +77,7 @@ Other scripts:
 | Where | Keys |
 | --- | --- |
 | Mind map | `Tab` add child · `Enter` add sibling · `F2` / double-click rename · `Del` delete selected · arrows navigate · `Space` locate in document · `Ctrl+F` find · `Ctrl+A` select all · `Ctrl+G` / `Ctrl+Shift+G` group / ungroup · drag empty space to select · right- or middle-drag to pan · double-click empty space for a new card there · `Esc` deselect |
-| Whiteboard | `V` select · `H` pan (or hold `Space`) · `P` pen · `M` highlighter · `E` eraser (press again: back to the pen) · `R` rectangle · `O` ellipse · `A` arrow · `T` text · `Ctrl+G` group cards · `Del` remove · arrows nudge · double-click empty space for a new card |
+| Whiteboard | `V` select · `H` pan (or hold `Space`) · `P` pen · `M` highlighter · `E` eraser (press again: back to the pen) · `R` rectangle · `O` ellipse · `A` arrow · `T` text · `C` area excerpt · `Ctrl+G` group cards · `Del` remove · arrows nudge · double-click empty space for a new card |
 | Formulas | `\` + letters: command suggestions · `↑`/`↓` choose · `Enter`/`Tab` insert · `Tab` next `{}` slot |
 | Anywhere | `Ctrl+,` settings |
 | Outline | `Tab` / `Shift+Tab` indent / outdent · `Alt+↑/↓` move · `Enter` new sibling · arrows navigate |

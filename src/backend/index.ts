@@ -110,6 +110,8 @@ export interface Backend {
   saveFile(defaultName: string, data: string | Uint8Array, filters: FileFilter[]): Promise<boolean>;
   takeOpenFiles(): Promise<OpenFile[]>;
   onOpenFiles(cb: (files: OpenFile[]) => void): () => void;
+  /** PNG of a part of the window as it is drawn (CSS pixels); null in the browser build. */
+  capturePage(rect: { x: number; y: number; width: number; height: number }): Promise<Blob | null>;
   setTitleBar(color: string, symbolColor: string, height: number): void;
   /** Interface zoom (no-op in the browser build). */
   setZoom(factor: number): void;

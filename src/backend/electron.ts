@@ -23,6 +23,9 @@ export function createElectronBackend(api: ElectronApi): Backend {
     saveFile: (name, data, filters) => api.saveFile(name, data, filters),
     takeOpenFiles: () => api.takeOpenFiles(),
     onOpenFiles: (cb) => api.onOpenFiles(cb),
+    async capturePage(rect) {
+      return new Blob([(await api.capturePage(rect)) as Uint8Array<ArrayBuffer>], { type: 'image/png' });
+    },
     setTitleBar(color, symbolColor, height) {
       void api.setTitleBar(color, symbolColor, height);
     },

@@ -447,6 +447,7 @@ const SHORTCUTS: [string, [string, string][]][] = [
       ['P / M', 'Pen / highlighter'],
       ['E', 'Eraser — press again to go back to the pen'],
       ['R / O / A / T', 'Rectangle / ellipse / arrow / text'],
+      ['C', 'Area excerpt — drag a box to make a picture card'],
       ['Pen eraser button', 'Erases while held'],
       ['Ctrl+G', 'Group selected cards'],
     ],

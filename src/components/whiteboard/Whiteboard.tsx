@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { backend, isElectron } from '../../backend';
 import { useSizes } from '../../hooks/useSizes';
 import { clamp, debounce, uid } from '../../lib/util';
 import { boardOf, groupsOf, useNotebook } from '../../store/notebook';
@@ -11,12 +12,13 @@ import { CardPreview, canEnlarge } from '../CardPreview';
 import { Icon, type IconName } from '../Icon';
 import { useLatexAssist } from '../LatexAssist';
 import { ArrowView, BoardCard, BoardTextView, ShapeView, StrokeView } from './BoardItems';
-import { boardRegistry, placeCards } from './boardActions';
+import { boardRegistry, findFreeSpot, placeCards } from './boardActions';
 import { CARD_DRAG_MIME, CardTray } from './CardTray';
 import {
   arrowHead,
   boxContains,
   boxesOverlap,
+  center,
   DEFAULT_CARD_W,
   DEFAULT_TEXT_W,
   hitItem,
@@ -31,7 +33,7 @@ import {
   type Pt,
 } from './geometry';
 
-type Tool = 'select' | 'hand' | 'pen' | 'marker' | 'eraser' | 'rect' | 'ellipse' | 'arrow' | 'text';
+type Tool = 'select' | 'hand' | 'pen' | 'marker' | 'eraser' | 'rect' | 'ellipse' | 'arrow' | 'text' | 'capture';
 
 interface Style {
   color: InkColor;
@@ -47,7 +49,8 @@ type Interaction =
   | { kind: 'draw'; points: number[]; marker: boolean }
   | { kind: 'erase'; ids: Set<string>; last: Pt }
   | { kind: 'shape'; shape: 'rect' | 'ellipse'; start: Pt; end: Pt; square: boolean }
-  | { kind: 'arrow'; from: ArrowEnd; end: Pt; toItem: string | null };
+  | { kind: 'arrow'; from: ArrowEnd; end: Pt; toItem: string | null }
+  | { kind: 'capture'; start: Pt; end: Pt };
 
 const TOOLS: { tool: Tool; icon: IconName; label: string; key: string }[] = [
   { tool: 'select', icon: 'cursor', label: 'Select & move', key: 'V' },
@@ -59,6 +62,7 @@ const TOOLS: { tool: Tool; icon: IconName; label: string; key: string }[] = [
   { tool: 'ellipse', icon: 'circle', label: 'Ellipse', key: 'O' },
   { tool: 'arrow', icon: 'arrow', label: 'Arrow — drag between cards to connect them', key: 'A' },
   { tool: 'text', icon: 'text', label: 'Text', key: 'T' },
+  { tool: 'capture', icon: 'area', label: 'Area excerpt — drag a box to turn that part of the board into a picture card', key: 'C' },
 ];
 
 const INKS: InkColor[] = ['ink', ...COLORS];
@@ -142,6 +146,8 @@ export function Whiteboard() {
   const [preview, setPreview] = useState<{ cardId: string; itemId: string } | null>(null);
   const [trayOpen, setTrayOpen] = useState(false);
   const [space, setSpace] = useState(false);
+  /** An area excerpt is being captured: the board hides its controls for a moment. */
+  const [capturing, setCapturing] = useState(false);
   const [vpSize, setVpSize] = useState({ w: 0, h: 0 });
 
   const vpRef = useRef<HTMLDivElement>(null);
@@ -465,6 +471,9 @@ export function Whiteboard() {
         setIx({ kind: 'arrow', from: hit ? { x: p.x, y: p.y, itemId: hit.id } : { x: p.x, y: p.y }, end: p, toItem: null });
         return;
       }
+      case 'capture':
+        setIx({ kind: 'capture', start: p, end: p });
+        return;
     }
   };
 
@@ -490,6 +499,7 @@ export function Whiteboard() {
         setIx({ ...cur, dx: p.x - cur.start.x, dy: p.y - cur.start.y });
         break;
       case 'marquee':
+      case 'capture':
         setIx({ ...cur, end: p });
         break;
       case 'draw': {
@@ -600,7 +610,68 @@ export function Whiteboard() {
         setTool('select');
         return;
       }
+      case 'capture': {
+        const b = normBox(cur.start, cur.end);
+        if (b.w * view.k < 8 || b.h * view.k < 8) return;
+        setTool('select');
+        void captureArea(b);
+        return;
+      }
     }
+  };
+
+  /** Area excerpt: turns what is drawn inside a box of the board into a picture card next to it. */
+  const captureArea = async (b: Box) => {
+    const vp = vpRef.current;
+    if (!vp) return;
+    const r = vp.getBoundingClientRect();
+    const v = viewRef.current;
+    // The box on screen, kept inside the board.
+    const left = Math.max(r.left, r.left + v.x + b.x * v.k);
+    const top = Math.max(r.top, r.top + v.y + b.y * v.k);
+    const right = Math.min(r.right, r.left + v.x + (b.x + b.w) * v.k);
+    const bottom = Math.min(r.bottom, r.top + v.y + (b.y + b.h) * v.k);
+    if (right - left < 4 || bottom - top < 4) return;
+    if (!isElectron) {
+      useUi.getState().toast('Area excerpts of the whiteboard need the desktop app', 'error');
+      return;
+    }
+    // Text inside the box, for search and export (the card itself shows the picture).
+    const text = live
+      .filter((it) => {
+        const c = center(boxOf(it));
+        return c.x >= b.x && c.x <= b.x + b.w && c.y >= b.y && c.y <= b.y + b.h;
+      })
+      .flatMap((it) => (it.type === 'text' ? [it.text] : it.type === 'card' && cards[it.cardId] ? [cards[it.cardId].title, cards[it.cardId].excerpt] : []))
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .join('\n');
+    setCapturing(true);
+    let blob: Blob | null = null;
+    try {
+      // Let the board hide its controls and selection before the picture is taken.
+      await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
+      blob = await backend.capturePage({ x: left, y: top, width: right - left, height: bottom - top });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCapturing(false);
+    }
+    if (!blob) {
+      useUi.getState().toast('Could not capture that area', 'error');
+      return;
+    }
+    const imageId = uid();
+    await backend.putAsset(imageId, blob);
+    const store = useNotebook.getState();
+    const spot = findFreeSpot({ x: b.x + b.w + 40, y: b.y });
+    const id = store.addCard(
+      { imageId, imageText: text || undefined, color: useStudy.getState().color },
+      { parentId: null },
+      { boardAt: { ...spot, w: DEFAULT_CARD_W } },
+    );
+    useStudy.getState().flashCard(id);
+    useUi.getState().toast('Captured as a picture card');
   };
 
   const onDoubleClick = (e: React.MouseEvent) => {
@@ -852,7 +923,7 @@ export function Whiteboard() {
   const previewCard = preview ? cards[preview.cardId] : undefined;
   const previewItem = preview ? liveById.get(preview.itemId) : undefined;
   // Colours/sizes are offered while a drawing tool is active, or to restyle a selection.
-  const showStyleBar = (tool !== 'select' && tool !== 'hand' && tool !== 'eraser') || (tool === 'select' && sel.length > 0);
+  const showStyleBar = (tool !== 'select' && tool !== 'hand' && tool !== 'eraser' && tool !== 'capture') || (tool === 'select' && sel.length > 0);
   const arrowFrom = ix?.kind === 'arrow' ? (ix.from.itemId ? resolve(ix.from.itemId) : null) : null;
   const frames = groups
     .map((g) => {
@@ -870,7 +941,7 @@ export function Whiteboard() {
   return (
     <div
       ref={vpRef}
-      className="mindmap whiteboard"
+      className={`mindmap whiteboard ${capturing ? 'capturing' : ''}`}
       tabIndex={0}
       style={
         {
@@ -989,6 +1060,7 @@ export function Whiteboard() {
         })}
         {single && resizable(single) && !ix && <Handle box={boxOf(single)} k={view.k} />}
         {ix?.kind === 'marquee' && <div className="wb-marquee" style={{ ...boxStyle(normBox(ix.start, ix.end)), borderWidth: 1 / view.k }} />}
+        {ix?.kind === 'capture' && <div className="wb-capture" style={{ ...boxStyle(normBox(ix.start, ix.end)), borderWidth: 2 / view.k }} />}
 
         {/* Text editing */}
         {draft && (
@@ -1026,7 +1098,7 @@ export function Whiteboard() {
       <div className="wb-tools" onPointerDown={(e) => e.stopPropagation()}>
         {TOOLS.map((t, i) => (
           <span key={t.tool} style={{ display: 'contents' }}>
-            {(i === 2 || i === 5) && <div className="wb-tools-sep" />}
+            {(i === 2 || i === 5 || i === 9) && <div className="wb-tools-sep" />}
             <button className={`btn icon ${tool === t.tool ? 'on' : ''}`} title={`${t.label} (${t.key})`} onClick={() => setTool(t.tool)}>
               <Icon name={t.icon} />
             </button>
@@ -1124,6 +1196,7 @@ const HINTS: Record<Tool, string> = {
   ellipse: 'Drag to draw an ellipse · Shift for a circle',
   arrow: 'Drag from one card to another to connect them',
   text: 'Click to place text',
+  capture: 'Drag a box over part of the board to turn it into a picture card',
 };
 
 /** Editor for a whiteboard text item (grows with its content; offers LaTeX completions). */
