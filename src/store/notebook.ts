@@ -5,6 +5,7 @@ import { ancestors, buildTree, childrenOf, descendantIds, isDescendant } from '.
 import { debounce, uid } from '../lib/util';
 import { EMPTY_BOARD, type Board, type BoardItem, type Card, type CardGroup, type CardMap, type ColorKey, type Notebook } from '../types';
 import { notebookMeta, useLibrary } from './library';
+import { editSurface } from './study';
 
 export interface NewCard {
   title?: string;
@@ -33,6 +34,8 @@ interface NotebookState {
   /** Every selected card, including `selectedId`. */
   selectedIds: string[];
   editingId: string | null;
+  /** The view whose copy of the card is being edited (a card can show in the map and on the whiteboard at once). */
+  editingIn: 'map' | 'board';
   past: Snapshot[];
   future: Snapshot[];
   histKey: string | null;
@@ -50,7 +53,8 @@ interface NotebookState {
   setSelection(ids: string[], primary?: string | null): void;
   /** Ctrl+click: adds a card to the selection, or removes it. */
   toggleSelected(id: string): void;
-  setEditing(id: string | null): void;
+  /** Starts editing a card's title, by default in the map or whiteboard the user is working in. */
+  setEditing(id: string | null, where?: 'map' | 'board'): void;
 
   /** Adds a card; by default it becomes the selection (pass select: false to keep the current one). */
   addCard(
@@ -215,6 +219,7 @@ export const useNotebook = create<NotebookState>((set, get) => {
     selectedId: null,
     selectedIds: [],
     editingId: null,
+    editingIn: 'map',
     past: [],
     future: [],
     histKey: null,
@@ -263,10 +268,11 @@ export const useNotebook = create<NotebookState>((set, get) => {
         set({ selectedIds: [...s.selectedIds, id], selectedId: id, editingId: null });
       }
     },
-    setEditing: (id) => {
+    setEditing: (id, where) => {
       const s = get();
       set({
         editingId: id,
+        editingIn: id ? (where ?? editSurface()) : s.editingIn,
         selectedId: id ?? s.selectedId,
         selectedIds: id && !s.selectedIds.includes(id) ? [id] : s.selectedIds,
       });

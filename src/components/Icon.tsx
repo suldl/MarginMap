@@ -66,12 +66,6 @@ const paths = {
     </>
   ),
   outline: <path d="M3 5h12M7 10h14M7 15h14M3 20h12M3 5v0" />,
-  split: (
-    <>
-      <rect x="3" y="4" width="18" height="16" rx="2" />
-      <path d="M12 4v16" />
-    </>
-  ),
   docOnly: (
     <>
       <rect x="3" y="4" width="18" height="16" rx="2" />

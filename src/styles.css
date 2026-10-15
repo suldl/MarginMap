@@ -589,9 +589,12 @@ select {
   display: flex;
   min-height: 0;
   position: relative;
+  overflow: hidden;
 }
-.study.swapped {
-  flex-direction: row-reverse;
+/* Document / mind map / whiteboard switches in the title bar (each one on its own). */
+.pane-toggles {
+  display: inline-flex;
+  gap: 2px;
 }
 .pane {
   min-width: 0;
@@ -631,6 +634,14 @@ select {
 }
 .toolbar .grow {
   flex: 1;
+}
+/* The reader can share the window with the map and the whiteboard; its tools wrap when it is narrow. */
+.reader-toolbar {
+  height: auto;
+  min-height: 40px;
+  flex-wrap: wrap;
+  padding: 4px 6px;
+  row-gap: 2px;
 }
 .page-indicator {
   display: flex;
@@ -922,12 +933,6 @@ select {
 /* Mind map                                                           */
 /* ------------------------------------------------------------------ */
 
-.map-pane {
-  flex: 1;
-  display: flex;
-  min-height: 0;
-  min-width: 0;
-}
 .mindmap {
   flex: 1;
   position: relative;
@@ -1160,7 +1165,10 @@ select {
   position: absolute;
   right: 12px;
   bottom: 12px;
+  max-width: calc(100% - 24px);
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 2px;
   padding: 3px;
   background: var(--panel);

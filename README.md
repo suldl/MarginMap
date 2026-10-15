@@ -11,6 +11,7 @@ A MarginNote-style study app for Windows. It covers the core MarginNote workflow
 | Area | What you get |
 | --- | --- |
 | **Library** | Import PDFs (button, drag & drop, or *Open with…* from Explorer), cover thumbnails, duplicate detection, notebooks that can hold several documents |
+| **Side by side** | Document, mind map and whiteboard each have their own switch in the title bar — show any of them, or all three at once. Drag the splitters to size them, *Swap sides* reverses their order |
 | **Reader** | Fast lazy-rendered pages (pdf.js), crisp at any zoom, fit-width mode, Ctrl+wheel zoom, table of contents, full-text search, bundled CJK character maps. A **pointer** tool clicks highlights and drags the page without selecting text |
 | **Excerpts** | Select text → choose a color → it becomes a highlighted card. **Area excerpts** capture figures, formulas and tables as images (and remember the text under them for search) |
 | **Mind map** | Horizontal tree with pan/zoom, drag & drop to reparent or reorder, collapse/expand, find (Ctrl+F), right-click menu, keyboard editing. Double-click a picture card to see it **enlarged** (big image, full text, notes) |
@@ -20,7 +21,7 @@ A MarginNote-style study app for Windows. It covers the core MarginNote workflow
 | **Formulas** | LaTeX in titles, excerpts, notes and whiteboard text — `$…$` inline, `$$…$$` display — rendered with KaTeX. Typing `\` suggests commands with live previews; Tab jumps between the `{}` slots of `\frac{}{}` and friends |
 | **Whiteboard** | A free canvas per notebook: drag cards anywhere, draw with pen and highlighter, add rectangles, ellipses, text and arrows that stay connected to cards as you move them. **E** toggles pen ⇄ eraser; works with pen tablets (the eraser end of a pen erases too) |
 | **Two-way links** | Clicking a card only selects it; click its page tag (*p.3*), press `Space` or choose *Locate in document* → the document jumps to the excerpt and flashes it. Click a highlight in the PDF → its card is selected in the map |
-| **Outline** | The same cards as an indented outline, with drag & drop and Tab / Shift+Tab indent/outdent |
+| **Outline** | The same cards as an indented outline (the outline button next to the pane switches), with drag & drop and Tab / Shift+Tab indent/outdent |
 | **Card panel** | Title, color, editable excerpt, notes, tags, source link, review toggle |
 | **Review** | Spaced repetition (SM-2, Anki-like): Again / Hard / Good / Easy, per notebook or across all notebooks |
 | **Export** | Markdown, OPML (importable by mind-map apps such as XMind and MindNode), JSON backup |
@@ -67,8 +68,8 @@ Other scripts:
 4. **Organize** in the mind map: drag cards onto each other (middle = child, top/bottom edge = sibling), into empty space to place them freely, or use the keyboard.
    Drag across empty space to select several cards, then **Ctrl+G** to group them; the funnel button filters by color, tag, group or status.
    Write formulas as `$E=mc^2$` anywhere in a card.
-   Or switch to the **whiteboard** (third view button) to arrange cards freely, sketch and connect them with arrows.
-   Open the **Cards** panel there to drag cards in, and new excerpts land on the board while it is open.
+   Turn on the **whiteboard** (its switch in the title bar; it can sit next to the document and the mind map) to arrange cards freely, sketch and connect them with arrows.
+   Open the **Cards** panel there to drag cards in, and new excerpts land on the board while it is showing.
 5. **Review**: switch on *Review as flashcard* in the card panel (or right-click → *Add with all children to review*), then press **Review**.
 
 ### Keyboard shortcuts

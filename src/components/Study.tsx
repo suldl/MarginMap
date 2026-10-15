@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { exportNotebook } from '../lib/export';
 import { releaseAllPdfs } from '../lib/pdf';
+import { clamp } from '../lib/util';
 import { useLibrary } from '../store/library';
 import { useNotebook } from '../store/notebook';
-import { useStudy } from '../store/study';
+import { PANES, useStudy, type Pane } from '../store/study';
 import { useUi } from '../store/ui';
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 import { Inspector } from './Inspector';
 import { filesFromList, importAndReport } from './Library';
 import { MindMap } from './mindmap/MindMap';
@@ -15,6 +16,16 @@ import { TitleBar } from './TitleBar';
 import { Whiteboard } from './whiteboard/Whiteboard';
 
 const lastDocKey = (nbId: string) => `marginmap.lastDoc.${nbId}`;
+
+/** Narrowest a pane gets when dragging a splitter. */
+const MIN_PANE_W = 220;
+
+/** Title-bar switches; each pane shows or hides on its own. */
+const PANE_BUTTONS: { pane: Pane; icon: IconName; label: string }[] = [
+  { pane: 'doc', icon: 'docOnly', label: 'document' },
+  { pane: 'map', icon: 'mindmap', label: 'mind map' },
+  { pane: 'board', icon: 'whiteboard', label: 'whiteboard' },
+];
 
 export function Study({ notebookId }: { notebookId: string }) {
   const nb = useNotebook((s) => s.nb);
@@ -110,7 +121,7 @@ function StudyView() {
   const canUndo = useNotebook((s) => s.past.length > 0);
   const canRedo = useNotebook((s) => s.future.length > 0);
   const docs = useLibrary((s) => s.docs);
-  const { layout, mapMode, split, swapped, inspector, activeDocId, set } = useStudy();
+  const { panes, mapView, widths, swapped, inspector, activeDocId, set, showPane } = useStudy();
   const navigate = useUi((s) => s.navigate);
   const studyRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -119,6 +130,13 @@ function StudyView() {
   const [dropping, setDropping] = useState(false);
 
   useEffect(() => setTitle(nb.title), [nb.title]);
+
+  const shown = (swapped ? [...PANES].reverse() : PANES).filter((p) => panes[p]);
+  /** The card panel goes with the mind map and the whiteboard. */
+  const cardPanes = panes.map || panes.board;
+  const activate = (p: Pane) => {
+    if (useStudy.getState().activePane !== p) set({ activePane: p });
+  };
 
   const now = Date.now();
   const cards = Object.values(nb.cards);
@@ -160,16 +178,20 @@ function StudyView() {
     ]);
   };
 
-  const startResize = (e: React.PointerEvent) => {
+  /** Splitter between two neighbouring panes: moves width from one to the other. */
+  const startResize = (e: React.PointerEvent, left: Pane, right: Pane) => {
     e.preventDefault();
     const el = studyRef.current;
-    if (!el) return;
+    const lw = el?.querySelector(`[data-pane="${left}"]`)?.getBoundingClientRect().width;
+    const rw = el?.querySelector(`[data-pane="${right}"]`)?.getBoundingClientRect().width;
+    if (!lw || !rw) return;
     setResizing(true);
-    const rect = el.getBoundingClientRect();
+    const start = useStudy.getState().widths;
+    const weight = start[left] + start[right];
+    const x0 = e.clientX;
     const move = (ev: PointerEvent) => {
-      let ratio = (ev.clientX - rect.left) / rect.width;
-      if (useStudy.getState().swapped) ratio = 1 - ratio;
-      set({ split: Math.min(0.8, Math.max(0.2, ratio)) });
+      const l = clamp(lw + ev.clientX - x0, MIN_PANE_W, lw + rw - MIN_PANE_W);
+      set({ widths: { ...useStudy.getState().widths, [left]: (weight * l) / (lw + rw), [right]: (weight * (lw + rw - l)) / (lw + rw) } });
     };
     const up = () => {
       setResizing(false);
@@ -273,50 +295,35 @@ function StudyView() {
           <Icon name="redo" />
         </button>
         <div className="divider-v" />
-        <div className="seg">
-          <button className={`btn icon ${layout === 'doc' ? 'on' : ''}`} title="Document only" onClick={() => set({ layout: 'doc' })}>
-            <Icon name="docOnly" />
-          </button>
-          <button className={`btn icon ${layout === 'split' ? 'on' : ''}`} title="Document + mind map" onClick={() => set({ layout: 'split' })}>
-            <Icon name="split" />
-          </button>
-          <button className={`btn icon ${layout === 'map' ? 'on' : ''}`} title="Mind map only" onClick={() => set({ layout: 'map' })}>
-            <Icon name="mindmap" />
-          </button>
+        <div className="pane-toggles" role="group" aria-label="Panes">
+          {PANE_BUTTONS.map((b) => (
+            <button
+              key={b.pane}
+              className={`btn icon ${panes[b.pane] ? 'on' : ''}`}
+              title={panes[b.pane] ? `Hide the ${b.label}` : `Show the ${b.label}`}
+              aria-pressed={panes[b.pane]}
+              onClick={() => showPane(b.pane)}
+            >
+              <Icon name={b.icon} />
+            </button>
+          ))}
         </div>
-        <div className="seg">
-          <button
-            className={`btn icon ${mapMode === 'mindmap' ? 'on' : ''}`}
-            title="Mind map view"
-            disabled={layout === 'doc'}
-            onClick={() => set({ mapMode: 'mindmap' })}
-          >
-            <Icon name="mindmap" />
-          </button>
-          <button
-            className={`btn icon ${mapMode === 'outline' ? 'on' : ''}`}
-            title="Outline view"
-            disabled={layout === 'doc'}
-            onClick={() => set({ mapMode: 'outline' })}
-          >
-            <Icon name="outline" />
-          </button>
-          <button
-            className={`btn icon ${mapMode === 'whiteboard' ? 'on' : ''}`}
-            title="Whiteboard view"
-            disabled={layout === 'doc'}
-            onClick={() => set({ mapMode: 'whiteboard' })}
-          >
-            <Icon name="whiteboard" />
-          </button>
-        </div>
-        <button className="btn icon" title="Swap sides" disabled={layout !== 'split'} onClick={() => set({ swapped: !swapped })}>
+        <button
+          className={`btn icon ${mapView === 'outline' ? 'on' : ''}`}
+          title={mapView === 'outline' ? 'Show the mind map as a map' : 'Show the mind map as an outline'}
+          aria-pressed={mapView === 'outline'}
+          disabled={!panes.map}
+          onClick={() => set({ mapView: mapView === 'outline' ? 'mindmap' : 'outline' })}
+        >
+          <Icon name="outline" />
+        </button>
+        <button className="btn icon" title="Swap sides" disabled={shown.length < 2} onClick={() => set({ swapped: !swapped })}>
           <Icon name="swap" />
         </button>
         <button
           className={`btn icon ${inspector ? 'on' : ''}`}
           title="Card panel"
-          disabled={layout === 'doc'}
+          disabled={!cardPanes}
           onClick={() => set({ inspector: !inspector })}
         >
           <Icon name="panel" />
@@ -343,7 +350,7 @@ function StudyView() {
 
       <div
         ref={studyRef}
-        className={`study ${swapped ? 'swapped' : ''}`}
+        className="study"
         style={dropping ? { outline: '3px dashed var(--accent)', outlineOffset: -6 } : undefined}
         onDragOver={(e) => {
           if (e.dataTransfer.types.includes('Files')) {
@@ -361,20 +368,21 @@ function StudyView() {
           void addDocs(e.dataTransfer.files);
         }}
       >
-        {layout !== 'map' && (
-          <div className="pane" style={layout === 'split' ? { width: `${split * 100}%`, flex: 'none' } : { flex: 1 }}>
-            <Reader notebookId={nb.id} />
-          </div>
-        )}
-        {layout === 'split' && <div className={`splitter ${resizing ? 'dragging' : ''}`} onPointerDown={startResize} />}
-        {layout !== 'doc' && (
-          <div className="pane" style={{ flex: 1 }}>
-            <div className="map-pane">
-              {mapMode === 'mindmap' ? <MindMap /> : mapMode === 'outline' ? <Outline /> : <Whiteboard />}
-              {inspector && <Inspector />}
+        {shown.map((p, i) => (
+          <Fragment key={p}>
+            {i > 0 && <div className={`splitter ${resizing ? 'dragging' : ''}`} onPointerDown={(e) => startResize(e, shown[i - 1], p)} />}
+            <div
+              className="pane"
+              data-pane={p}
+              style={{ flex: `${widths[p]} 1 0`, minWidth: MIN_PANE_W }}
+              onPointerDownCapture={() => activate(p)}
+              onFocusCapture={() => activate(p)}
+            >
+              {p === 'doc' ? <Reader notebookId={nb.id} /> : p === 'board' ? <Whiteboard /> : mapView === 'outline' ? <Outline /> : <MindMap />}
             </div>
-          </div>
-        )}
+          </Fragment>
+        ))}
+        {inspector && cardPanes && <Inspector />}
         {resizing && <div style={{ position: 'fixed', inset: 0, cursor: 'col-resize', zIndex: 50 }} />}
       </div>
     </>

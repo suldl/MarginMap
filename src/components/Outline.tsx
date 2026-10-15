@@ -16,7 +16,7 @@ export function Outline() {
   const selectedId = useNotebook((s) => s.selectedId);
   const selectedIds = useNotebook((s) => s.selectedIds);
   const groups = useNotebook((s) => groupsOf(s.nb));
-  const editingId = useNotebook((s) => s.editingId);
+  const editingId = useNotebook((s) => (s.editingIn === 'map' ? s.editingId : null));
   const reveal = useStudy((s) => s.reveal);
   const tree = buildTree(cards);
   const rows = flatten(tree, true);

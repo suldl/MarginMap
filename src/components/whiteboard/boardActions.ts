@@ -12,8 +12,7 @@ import { boxesOverlap, DEFAULT_CARD_W, itemBox, type Box, type Pt, type Sizes } 
 export const boardRegistry: { center: Pt | null; sizes: Sizes } = { center: null, sizes: new Map() };
 
 export function isWhiteboardActive() {
-  const s = useStudy.getState();
-  return s.mapMode === 'whiteboard' && s.layout !== 'doc';
+  return useStudy.getState().panes.board;
 }
 
 /** First spot at or below `start` where a card of width `w` doesn't overlap other cards, text or shapes. */
@@ -72,7 +71,7 @@ export function placeCards(cardIds: string[], at?: Pt): string[] {
 /** "Add to whiteboard" from the mind map / outline menus. */
 export function addCardToBoard(cardId: string) {
   if (placedCardIds().has(cardId)) {
-    useStudy.getState().set({ mapMode: 'whiteboard' });
+    useStudy.getState().showPane('board', true);
     useStudy.getState().revealCard(cardId);
     return;
   }

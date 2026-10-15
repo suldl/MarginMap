@@ -457,7 +457,7 @@ function DocReader({ notebookId, docId }: { notebookId: string; docId: string })
 
   return (
     <div className="pane" style={{ flex: 1 }} onKeyDown={onKeyDown}>
-      <div className="toolbar">
+      <div className="toolbar reader-toolbar">
         <button
           className={`btn icon ${sidebar === 'toc' ? 'on' : ''}`}
           title="Table of contents"
@@ -619,8 +619,9 @@ function DocReader({ notebookId, docId }: { notebookId: string; docId: string })
                   <button
                     className="btn"
                     onClick={() => {
-                      useStudy.getState().flashCard(hlCard.id);
-                      if (useStudy.getState().layout === 'doc') setStudy({ layout: 'split' });
+                      const study = useStudy.getState();
+                      if (!study.panes.map && !study.panes.board) study.showPane('map', true);
+                      study.flashCard(hlCard.id);
                     }}
                   >
                     <Icon name="mindmap" size={15} /> Card

@@ -109,10 +109,11 @@ export function MindMap() {
   const groups = useNotebook((s) => groupsOf(s.nb));
   const selectedId = useNotebook((s) => s.selectedId);
   const selectedIds = useNotebook((s) => s.selectedIds);
-  const editingId = useNotebook((s) => s.editingId);
+  /** Title being edited here (a card on the whiteboard as well is edited there, not in both places). */
+  const editingId = useNotebook((s) => (s.editingIn === 'map' ? s.editingId : null));
   const reveal = useStudy((s) => s.reveal);
   const flash = useStudy((s) => s.flash);
-  const studyLayout = useStudy((s) => s.layout);
+  const docShown = useStudy((s) => s.panes.doc);
   const enlarge = useStudy((s) => s.enlarge);
   const edgeStyle = useSettings((s) => s.edgeStyle);
   const mapDrag = useSettings((s) => s.mapDrag);
@@ -482,7 +483,7 @@ export function MindMap() {
     if (e.button !== 0) return;
     e.stopPropagation();
     const store = useNotebook.getState();
-    if (store.editingId === id) return;
+    if (store.editingId === id && store.editingIn === 'map') return;
     vpRef.current?.focus({ preventScroll: true });
     if (filterOpen) setFilterOpen(false);
     const modifier = e.ctrlKey || e.metaKey || e.shiftKey;
@@ -962,7 +963,7 @@ export function MindMap() {
       )}
 
       <div className="map-hint" style={vpSize.w && vpSize.w < 1000 ? { display: 'none' } : undefined}>
-        {studyLayout !== 'map' && <span>Click a card's page tag or press Space to find its excerpt</span>}
+        {docShown && <span>Click a card's page tag or press Space to find its excerpt</span>}
         <span>
           {mapDrag === 'select' ? 'Drag empty space to select · right-drag to pan' : 'Drag to pan · Shift+drag to select'} · drag cards anywhere
         </span>

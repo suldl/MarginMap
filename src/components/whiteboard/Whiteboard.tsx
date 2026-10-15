@@ -110,7 +110,9 @@ const attachable = (it: BoardItem) => it.type === 'card' || it.type === 'shape' 
 
 export function Whiteboard() {
   const nb = useNotebook((s) => s.nb!);
-  const editingId = useNotebook((s) => s.editingId);
+  /** Title being edited on the board (not one edited in the mind map next to it). */
+  const editingId = useNotebook((s) => (s.editingIn === 'board' ? s.editingId : null));
+  const selectedIds = useNotebook((s) => s.selectedIds);
   const reveal = useStudy((s) => s.reveal);
   const flash = useStudy((s) => s.flash);
   const enlarge = useStudy((s) => s.enlarge);
@@ -202,8 +204,12 @@ export function Whiteboard() {
     if (preview && (!cards[preview.cardId] || !liveById.has(preview.itemId))) setPreview(null);
   }, [liveById, cards, preview]);
 
+  const wasEditing = useRef(false);
   useEffect(() => {
     if (editingId) setPreview(null);
+    // Keep keyboard focus on the board after editing a card's title.
+    else if (wasEditing.current && (document.activeElement === document.body || !document.activeElement)) vpRef.current?.focus({ preventScroll: true });
+    wasEditing.current = !!editingId;
   }, [editingId]);
 
   // ---- helpers ------------------------------------------------------------------------
@@ -299,7 +305,8 @@ export function Whiteboard() {
     setView({ k: nk, x: px - ((px - v.x) * nk) / v.k, y: py - ((py - v.y) * nk) / v.k });
   };
 
-  const selectItems = (ids: string[]) => {
+  /** Selects board items; `focus` is the card the card panel shows when several are selected. */
+  const selectItems = (ids: string[], focus?: string) => {
     setSel(ids);
     // Selected cards also become the notebook selection, so the card panel can edit them in bulk.
     const cardIds = ids.flatMap((id) => {
@@ -307,7 +314,7 @@ export function Whiteboard() {
       return it?.type === 'card' && cards[it.cardId] ? [it.cardId] : [];
     });
     if (cardIds.length === 1) useNotebook.getState().select(cardIds[0]);
-    else if (cardIds.length > 1) useNotebook.getState().setSelection(cardIds);
+    else if (cardIds.length > 1) useNotebook.getState().setSelection(cardIds, focus && cardIds.includes(focus) ? focus : undefined);
   };
 
   /** Board items of the cards in a group. */
@@ -321,13 +328,28 @@ export function Whiteboard() {
     ensureVisible(boxOf(it));
   };
 
-  // Reveal requests: clicking a highlight in the reader selects the card here too.
+  // Cards selected elsewhere (mind map, outline, a highlight in the reader) are selected here too.
+  useEffect(() => {
+    const want = new Set(selectedIds);
+    setSel((cur) => {
+      const curCards = cur.flatMap((id) => {
+        const it = liveById.get(id);
+        return it?.type === 'card' ? [it.cardId] : [];
+      });
+      if (curCards.length === want.size && curCards.every((id) => want.has(id))) return cur;
+      return items.filter((it) => it.type === 'card' && want.has(it.cardId)).map((it) => it.id);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedIds]);
+
+  // Reveal requests (new excerpts, keyboard navigation in the map…) bring the card into view.
   // (Requests made before the whiteboard opened are ignored.)
   const seenReveal = useRef(reveal?.nonce);
   useEffect(() => {
     if (!reveal || reveal.nonce === seenReveal.current) return;
     seenReveal.current = reveal.nonce;
-    focusCard(reveal.cardId);
+    const it = live.find((i) => i.type === 'card' && i.cardId === reveal.cardId);
+    if (it) ensureVisible(boxOf(it));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reveal]);
 
@@ -419,8 +441,7 @@ export function Whiteboard() {
           let next = sel;
           if (e.shiftKey) next = sel.includes(hit.id) ? sel.filter((id) => id !== hit.id) : [...sel, hit.id];
           else if (!sel.includes(hit.id)) next = [hit.id];
-          selectItems(next);
-          if (hit.type === 'card') useNotebook.getState().select(hit.cardId);
+          selectItems(next, hit.type === 'card' ? hit.cardId : undefined);
           setIx({ kind: 'move', ids: next.includes(hit.id) ? next : [], start: p, dx: 0, dy: 0, moved: false, clickedId: hit.id, shift: e.shiftKey });
         } else {
           if (!e.shiftKey) {
@@ -770,7 +791,8 @@ export function Whiteboard() {
         {
           label: 'Show in mind map',
           onClick: () => {
-            useStudy.getState().set({ mapMode: 'mindmap' });
+            useStudy.getState().showPane('map', true);
+            useStudy.getState().set({ mapView: 'mindmap' });
             store.select(card.id);
             useStudy.getState().revealCard(card.id);
           },
