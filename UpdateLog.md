@@ -67,3 +67,7 @@ Status: all items done in v0.5.0 (2026-10-14). `npm run test:e2e` covers each of
 
 1. Text and picture excerpt in document cancel color filling.
 2. Double-click to enlarge to nearly full screen.
+
+## v0.8.0
+
+1. Study set. feature refer marginnote4 user manual.
