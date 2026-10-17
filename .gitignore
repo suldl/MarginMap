@@ -5,3 +5,4 @@ release/
 public/pdfjs/
 *.log
 tests/output/
+UpdateLog.md
